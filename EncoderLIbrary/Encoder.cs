@@ -42,6 +42,7 @@ namespace EncoderLIbrary
                 if (userInputs.TryGetValue(item.Name, out object value))
                 {
                     ValidateValueSize(item, value);
+<<<<<<< HEAD
                     RouteItemEncoding(item, value, buffer, currentLocation);
                 }
             }
@@ -87,10 +88,23 @@ namespace EncoderLIbrary
                         item.Name,
                         $"Error: Value {val} exceeds signed bit capacity [{minAllowed} .. {maxAllowed}] for {item.Bit} bits!"
                     );
+=======
+
+                    if (item.Bit > 8)
+                    {
+                        EncodeMultiByteItem(item, value, buffer);
+                    }
+                    else
+                    {
+                        uint maskedVal = ProcessItemValue(item, value);
+                        buffer[currentLocation] |= (byte)maskedVal;
+                    }
+>>>>>>> 7280ccd ([FEAT] Refactor ICD encoding logic and add multi-byte & validation support)
                 }
             }
         }
 
+<<<<<<< HEAD
         private void RouteItemEncoding(IcdItem item, object value, byte[] buffer, int currentLocation)
         {
             if (IsFloatItem(item))
@@ -104,6 +118,59 @@ namespace EncoderLIbrary
             else
             {
                 EncodeSingleByteItem(item, value, buffer, currentLocation);
+=======
+        private void ValidateValueSize(IcdItem item, object value)
+        {
+            double val = Convert.ToDouble(value);
+
+            if (val < item.Min || val > item.Max)
+            {
+                throw new ArgumentOutOfRangeException(
+                    item.Name,
+                    $"Error: Value {val} for '{item.Name}' is out of range [{item.Min}..{item.Max}]!"
+                );
+            }
+
+            double maxAllowedByBits = Math.Pow(2, item.Bit) - 1;
+            if (item.Min >= 0 && val > maxAllowedByBits)
+            {
+                throw new ArgumentOutOfRangeException(
+                    item.Name,
+                    $"Error: Value {val} exceeds bit capacity ({maxAllowedByBits}) for {item.Bit} bits!"
+                );
+            }
+        }
+
+        private void EncodeMultiByteItem(IcdItem item, object value, byte[] buffer)
+        {
+            ulong rawVal = Convert.ToUInt64(value);
+            int bytesCount = (int)Math.Ceiling(item.Bit / 8.0);
+
+            for (int i = 0; i < bytesCount; i++)
+            {
+                int shiftIndex = (bytesCount - 1 - i) * 8;
+                byte byteValue = (byte)((rawVal >> shiftIndex) & 0xFF);
+
+                buffer[item.Location + i] = byteValue;
+            }
+        }
+
+        private uint ProcessItemValue(IcdItem item, object value)
+        {
+            uint mask = string.IsNullOrWhiteSpace(item.Mask)
+                ? 0xFF
+                : Convert.ToUInt32(item.Mask, 2);
+
+            int shift = item.GetShiftFromMask();
+
+            if (item.Min >= 0)
+            {
+                return EncodeUnsignedValue(value, shift, mask);
+            }
+            else
+            {
+                return EncodeSignedValue(value, shift, mask);
+>>>>>>> 7280ccd ([FEAT] Refactor ICD encoding logic and add multi-byte & validation support)
             }
         }
         private bool IsFloatItem(IcdItem item)
@@ -111,6 +178,7 @@ namespace EncoderLIbrary
             return string.Equals(item.Type, "float", StringComparison.OrdinalIgnoreCase);
         }
 
+<<<<<<< HEAD
 
         private void EncodeFloatItem(IcdItem item, object value, byte[] buffer)
         {
@@ -167,6 +235,8 @@ namespace EncoderLIbrary
                 return EncodeSignedValue(value, shift, mask);
             }
         }
+=======
+>>>>>>> 7280ccd ([FEAT] Refactor ICD encoding logic and add multi-byte & validation support)
         private uint EncodeUnsignedValue(object value, int shift, uint mask)
         {
             uint rawVal = Convert.ToUInt32(value);
