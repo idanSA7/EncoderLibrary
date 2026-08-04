@@ -2,10 +2,10 @@ using System.Text.Json.Serialization;
 
 namespace EncoderLIbrary
 {
-    public class IcdItem : IIcdItem
+    public class IcdItem : IItem
     {
         [JsonPropertyName("Id")]
-        public string Id { get; set; }
+        public int Id { get; set; }
 
         [JsonPropertyName("Location")]
         public int Location { get; set; }
@@ -17,32 +17,34 @@ namespace EncoderLIbrary
         public string Mask { get; set; }
 
         [JsonPropertyName("Bit")]
-        public int Bit { get; set; }
+        public int Size { get; set; }
 
         [JsonPropertyName("Min")]
-        public float Min { get; set; }
+        public int Min { get; set; }
 
         [JsonPropertyName("Max")]
-        public float Max { get; set; }
+        public int Max { get; set; }
 
         [JsonPropertyName("Type")]
-        public string Type { get; set; }
+        public DataType Type { get; set; }
 
+        private const int RequiredMaskLength = 8;
+        private const char PaddingChar = '0';
         public int GetShiftFromMask()
         {
             if (string.IsNullOrWhiteSpace(Mask))
                 return 0;
 
-            // CHANGE: Added PadLeft(8, '0') to protect against short mask strings
-            string trimmedMask = Mask.Trim().PadLeft(8, '0');
+            string trimmedMask = Mask.Trim().PadLeft(RequiredMaskLength, PaddingChar);
 
-            for (int i = 0; i < trimmedMask.Length; i++)
+            for (int shiftAmount = 0; shiftAmount < trimmedMask.Length; shiftAmount++)
             {
-                int bitIndexFromRight = trimmedMask.Length - 1 - i;
+                // Calculate the bit position starting from the least significant bit (rightmost side)
+                int bitIndexFromRight = trimmedMask.Length - 1 - shiftAmount;
 
                 if (trimmedMask[bitIndexFromRight] == '1')
                 {
-                    return i;
+                    return shiftAmount;
                 }
             }
 

@@ -7,11 +7,11 @@ namespace EncoderLIbrary
 {
     public class IcdModel
     {
-        public List<IcdItem> items { get; set; }
+        public List<IcdItem> IcdItems { get; set; }
 
         public IcdModel()
         {
-            items = new List<IcdItem>();
+            IcdItems = new List<IcdItem>();
         }
 
         public static IcdModel LoadFromJson(string jsonContent)
@@ -26,17 +26,18 @@ namespace EncoderLIbrary
 
                 List<IcdItem> deserializedItems = JsonSerializer.Deserialize<List<IcdItem>>(jsonContent, options);
 
-                return new IcdModel
+                IcdModel model = new IcdModel
                 {
-                    items = deserializedItems ?? new List<IcdItem>()
+                    IcdItems = deserializedItems ?? new List<IcdItem>()
                 };
+
+                return model;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[Error] Failed to deserialize ICD JSON: {ex.Message}");
-                return null; 
+                throw; 
             }
         }
-
     }
 }

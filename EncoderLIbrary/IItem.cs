@@ -6,16 +6,15 @@ using System.Threading.Tasks;
 
 namespace EncoderLIbrary
 {
-    public interface IIcdItem
+    public interface IItem
     {
-        string Id { get; }
+        int Id { get; }
         int Location { get; }
         string Name { get; }
         string Mask { get; }
-        //int StartBit { get; }
-        int Bit { get; }
-        float Min { get; }
-        float Max { get; }
-        string Type { get; }
+        int Size { get; }
+        int Min { get; }
+        int Max { get; }
+        DataType Type { get; }
     }
 }
