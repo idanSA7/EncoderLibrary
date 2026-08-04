@@ -125,16 +125,7 @@ namespace EncoderLIbrary
                 }
             }
 
-            double maxAllowedByBits = Math.Pow(2, item.Bit) - 1;
-            if (item.Min >= 0 && val > maxAllowedByBits)
-            {
-                throw new ArgumentOutOfRangeException(
-                    item.Name,
-                    $"Error: Value {val} exceeds bit capacity ({maxAllowedByBits}) for {item.Bit} bits!"
-                );
-            }
-        }
-
+            
         private bool IsFloatItem(IcdItem currentIcdItem)
         {
             return (currentIcdItem.Type == DataType.Float);
