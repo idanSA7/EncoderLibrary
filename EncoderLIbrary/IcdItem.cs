@@ -27,28 +27,5 @@ namespace EncoderLIbrary
 
         [JsonPropertyName("Type")]
         public DataType Type { get; set; }
-
-        private const int RequiredMaskLength = 8;
-        private const char PaddingChar = '0';
-        public int GetShiftFromMask()
-        {
-            if (string.IsNullOrWhiteSpace(Mask))
-                return 0;
-
-            string trimmedMask = Mask.Trim().PadLeft(RequiredMaskLength, PaddingChar);
-
-            for (int shiftAmount = 0; shiftAmount < trimmedMask.Length; shiftAmount++)
-            {
-                // Calculate the bit position starting from the least significant bit (rightmost side)
-                int bitIndexFromRight = trimmedMask.Length - 1 - shiftAmount;
-
-                if (trimmedMask[bitIndexFromRight] == '1')
-                {
-                    return shiftAmount;
-                }
-            }
-
-            return 0;
-        }
     }
 }
