@@ -16,7 +16,7 @@ namespace EncoderLIbrary
         [JsonPropertyName("Mask")]
         public string Mask { get; set; }
 
-        [JsonPropertyName("Bit")]
+        [JsonPropertyName("Size")]
         public int Size { get; set; }
 
         [JsonPropertyName("Min")]
