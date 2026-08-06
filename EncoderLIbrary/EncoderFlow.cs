@@ -28,7 +28,7 @@ namespace EncoderLIbrary
             return outputBuffer;
         }
 
-        private int BufferSizeCalc(IcdModel model)
+        private static int BufferSizeCalc(IcdModel model)
         {
             IcdItem lastIcdItem = model.IcdItems.Last();
             int lastItemBytesSpan = (int)Math.Ceiling(lastIcdItem.Size / (double)EncoderMath.BITS_PER_BYTE);
@@ -73,7 +73,7 @@ namespace EncoderLIbrary
 
         internal static bool IsFloatItem(IcdItem targetIcdItem)
         {
-            return (targetIcdItem.Type == DataType.Float);
+            return targetIcdItem.Type == DataType.Float;
         }
 
         private void EncodeFloatItem(IcdItem targetIcdItem, string rawInputString, byte[] outputBuffer)

@@ -7,6 +7,7 @@ namespace EncoderLIbrary
         public const int BITS_PER_BYTE = 8;
         public const byte DEFAULT_BYTE_MASK = 0xFF;
         public const byte IS_SIGNED_NUM = 0;
+        public const uint FULL_32_BIT_MASK = 0xFFFFFFFF;
 
         public static bool ValidateValueSize(IcdItem targetIcdItem, string rawInputString)
         {
@@ -78,9 +79,20 @@ namespace EncoderLIbrary
 
         public static uint FormatValueToBits(IcdItem targetIcdItem, string rawInputString)
         {
-            uint maskBits = !string.IsNullOrWhiteSpace(targetIcdItem.Mask)
-                ? Convert.ToUInt32(targetIcdItem.Mask, 2)
-                : (targetIcdItem.Size >= 32 ? 0xFFFFFFFF : (1U << targetIcdItem.Size) - 1);
+            uint maskBits;
+
+            if (!string.IsNullOrWhiteSpace(targetIcdItem.Mask))
+            {
+                maskBits = Convert.ToUInt32(targetIcdItem.Mask, 2);
+            }
+            else if (targetIcdItem.Size >= 32)
+            {
+                maskBits = FULL_32_BIT_MASK;
+            }
+            else
+            {
+                maskBits = (1U << targetIcdItem.Size) - 1;
+            }
 
             int bitShift = targetIcdItem.GetShiftFromMask();
             uint rawUnsignedVal;
