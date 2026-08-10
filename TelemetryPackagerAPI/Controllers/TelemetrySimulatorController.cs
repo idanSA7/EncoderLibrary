@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using TelemetryPackagerAPI.DTOs;
-using TelemetryPackagerAPI.Services;
+using TelemetrySimulator.DTOs;
+using TelemetrySimulator.Services;
 
-namespace TelemetryPackagerAPI.Controllers
+namespace TelemetrySimulator.Services
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -12,15 +12,15 @@ namespace TelemetryPackagerAPI.Controllers
         private const string BROADCAST_STARTED_MESSAGE = "Broadcasting started successfully.";
         private const string BROADCAST_STOPPED_MESSAGE = "Broadcasting stopped successfully.";
 
-        private readonly ITelemetryPackagingService _telemetryService;
+        private readonly ITelemetrySimulationService _telemetryService;
 
-        public TelemetryPackagerController(ITelemetryPackagingService telemetryService)
+        public TelemetryPackagerController(ITelemetrySimulationService telemetryService)
         {
             _telemetryService = telemetryService;
         }
 
         [HttpPost("start")]
-        public IActionResult Start([FromBody] TelemetryPackagingRequestDto configuration)
+        public IActionResult Start([FromBody] TelemetrySimulationRequestDto configuration)
         {
             if (!ModelState.IsValid)
             {

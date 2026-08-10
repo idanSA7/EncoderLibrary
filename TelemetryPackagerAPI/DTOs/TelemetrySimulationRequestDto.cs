@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
-namespace TelemetryPackagerAPI.DTOs
+namespace TelemetrySimulator.DTOs
 {
-    public class TelemetryPackagingRequestDto
+    public class TelemetrySimulationRequestDto
     {
         private const int MIN_PORT_RANGE = 1024;
         private const int MAX_PORT_RANGE = 65535;

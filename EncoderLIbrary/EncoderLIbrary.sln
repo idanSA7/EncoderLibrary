@@ -9,7 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EncoderTests", "..\EncoderTests\EncoderTests.csproj", "{62BF7634-85A4-4837-8533-D66DC6CB9496}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelemetryPackagerAPI", "..\TelemetryPackagerAPI\TelemetryPackagerAPI.csproj", "{0C026750-0D34-45B5-8F29-7EF71A9D67A1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelemetrySimulator", "..\TelemetryPackagerAPI\TelemetrySimulator.csproj", "{0C026750-0D34-45B5-8F29-7EF71A9D67A1}"
 	ProjectSection(ProjectDependencies) = postProject
 		{FEFBE4F7-5595-40C2-A858-73CDF7791ED8} = {FEFBE4F7-5595-40C2-A858-73CDF7791ED8}
 	EndProjectSection

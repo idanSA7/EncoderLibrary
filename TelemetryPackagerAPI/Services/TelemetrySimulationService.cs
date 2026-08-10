@@ -6,13 +6,13 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using TelemetryPackagerAPI.DTOs;
+using TelemetrySimulator.DTOs;
 
-namespace TelemetryPackagerAPI.Services
+namespace TelemetrySimulator.Services
 {
     
 
-    public class TelemetryPackagingService : ITelemetryPackagingService
+    public class TelemetrySimulationService : ITelemetrySimulationService
     {
         private const string DEFAULT_TARGET_IP = "127.0.0.1";
         private const string CONFIG_TARGET_IP_KEY = "NetworkSettings:TargetIp";
@@ -33,7 +33,7 @@ namespace TelemetryPackagerAPI.Services
 
         public bool IsBroadcastingActive { get; private set; }
 
-        public TelemetryPackagingService(IConfiguration configuration)
+        public TelemetrySimulationService(IConfiguration configuration)
         {
             _configuration = configuration;
         }
@@ -46,7 +46,7 @@ namespace TelemetryPackagerAPI.Services
             IsBroadcastingActive = false;
         }
 
-        public bool StartPackagingAndBroadcasting(TelemetryPackagingRequestDto configuration)
+        public bool StartPackagingAndBroadcasting(TelemetrySimulationRequestDto configuration)
         {
             if (IsBroadcastingActive) return false;
 
@@ -58,7 +58,7 @@ namespace TelemetryPackagerAPI.Services
             return true;
         }
 
-        private async Task ExecutePackagingLoop(TelemetryPackagingRequestDto configuration, CancellationToken cancellationToken)
+        private async Task ExecutePackagingLoop(TelemetrySimulationRequestDto configuration, CancellationToken cancellationToken)
         {
             using UdpClient targetUdpSocketClient = new UdpClient();
             string targetIp = _configuration[CONFIG_TARGET_IP_KEY] ?? DEFAULT_TARGET_IP;
