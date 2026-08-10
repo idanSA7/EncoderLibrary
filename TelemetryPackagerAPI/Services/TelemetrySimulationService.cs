@@ -67,15 +67,21 @@ namespace TelemetrySimulator.Services
             {
                 string icdFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ICD_DIRECTORY_NAME, ICD_FILE_NAME);
 
+                Console.WriteLine($"[DEBUG] Looking for ICD file at: {icdFilePath}");
+
                 if (!File.Exists(icdFilePath))
                 {
+                    Console.WriteLine("[ERROR] The ICD file was NOT FOUND! Aborting UDP broadcast.");
                     return;
                 }
 
+                Console.WriteLine("[DEBUG] ICD file found successfully. Loading...");
                 string icdJsonContent = await File.ReadAllTextAsync(icdFilePath, cancellationToken);
 
                 IcdModel targetIcdDefinition = IcdModel.LoadFromJson(icdJsonContent)
                                                ?? throw new InvalidOperationException("Failed to load ICD file.");
+
+                Console.WriteLine($"[DEBUG] Starting UDP broadcast to IP: {targetIp}, Port: {configuration.DestinationNetworkPort}");
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
@@ -99,6 +105,12 @@ namespace TelemetrySimulator.Services
                             targetIp,
                             configuration.DestinationNetworkPort
                         );
+
+                        Console.WriteLine($"[SUCCESS] UDP Packet sent! Size: {encodedPacketBuffer.Length} bytes.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("[WARNING] Encoder returned an empty or null buffer.");
                     }
 
                     await Task.Delay(configuration.TransmissionIntervalMilliseconds, cancellationToken);
@@ -106,11 +118,17 @@ namespace TelemetrySimulator.Services
             }
             catch (TaskCanceledException)
             {
-                
+                Console.WriteLine("[DEBUG] Broadcasting was stopped by the user.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[CRITICAL ERROR] The background task crashed: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
             }
             finally
             {
                 IsBroadcastingActive = false;
+                Console.WriteLine("[DEBUG] Broadcasting loop has completely terminated.");
             }
         }
 

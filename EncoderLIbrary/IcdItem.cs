@@ -26,6 +26,7 @@ namespace EncoderLIbrary
         public int Max { get; set; }
 
         [JsonPropertyName("Type")]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public DataType Type { get; set; }
     }
 }
