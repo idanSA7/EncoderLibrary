@@ -1,21 +1,18 @@
 ﻿using EncoderLIbrary;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using TelemetrySimulator.Configuration;
 using TelemetrySimulator.DTOs;
 
 namespace TelemetrySimulator.Services
 {
-    
-
     public class TelemetrySimulationService : ITelemetrySimulationService
     {
-        private const string DEFAULT_TARGET_IP = "127.0.0.1";
-        private const string CONFIG_TARGET_IP_KEY = "NetworkSettings:TargetIp";
         private const string ICD_DIRECTORY_NAME = "IcdDefinitions";
         private const string ICD_FILE_NAME = "FlightBoxDownIcd.json";
 
@@ -27,15 +24,15 @@ namespace TelemetrySimulator.Services
         private const string DOUBLE_TYPE_NAME = "double";
 
         private readonly EncoderFlow _telemetryEncoderFlow = new EncoderFlow();
-        private readonly IConfiguration _configuration;
+        private readonly IOptionsMonitor<NetworkSettings> _networkOptionsMonitor;
         private CancellationTokenSource? _transmissionCancellationTokenSource;
         private byte _packetCounter = 0;
 
         public bool IsBroadcastingActive { get; private set; }
 
-        public TelemetrySimulationService(IConfiguration configuration)
+        public TelemetrySimulationService(IOptionsMonitor<NetworkSettings> networkOptionsMonitor)
         {
-            _configuration = configuration;
+            _networkOptionsMonitor = networkOptionsMonitor;
         }
 
         public void StopPackagingAndBroadcasting()
@@ -61,7 +58,9 @@ namespace TelemetrySimulator.Services
         private async Task ExecutePackagingLoop(TelemetrySimulationRequestDto configuration, CancellationToken cancellationToken)
         {
             using UdpClient targetUdpSocketClient = new UdpClient();
-            string targetIp = _configuration[CONFIG_TARGET_IP_KEY] ?? DEFAULT_TARGET_IP;
+
+            // Access target IP strongly-typed via Options Pattern
+            string targetIp = _networkOptionsMonitor.CurrentValue.TargetIp;
 
             try
             {
