@@ -4,10 +4,7 @@ namespace IcdModelsLIbrary
     {
         private const int RequiredMaskLength = 8;
         private const char PaddingChar = '0';
-        public static bool IsSigned(this IcdItem item)
-        {
-            return item != null && item.Min < 0;
-        }
+
         public static int GetShiftFromMask(this IcdItem item)
         {
             if (string.IsNullOrWhiteSpace(item?.Mask))

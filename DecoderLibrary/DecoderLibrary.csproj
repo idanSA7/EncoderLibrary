@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\IcdModelsLibrary\IcdModelsLibrary.csproj" />
+  </ItemGroup>
+
 </Project>
