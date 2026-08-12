@@ -16,6 +16,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelemetrySimulator", "..\Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DecoderLibrary", "..\DecoderLibrary\DecoderLibrary.csproj", "{171C56B0-610F-490C-9164-64852BE82D4C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IcdModelsLibrary", "..\IcdModelsLibrary\IcdModelsLibrary.csproj", "{907255E7-8ADE-4397-88A2-0E070ED3584B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,6 +40,10 @@ Global
 		{171C56B0-610F-490C-9164-64852BE82D4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{171C56B0-610F-490C-9164-64852BE82D4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{171C56B0-610F-490C-9164-64852BE82D4C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{907255E7-8ADE-4397-88A2-0E070ED3584B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{907255E7-8ADE-4397-88A2-0E070ED3584B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{907255E7-8ADE-4397-88A2-0E070ED3584B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{907255E7-8ADE-4397-88A2-0E070ED3584B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
