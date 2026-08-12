@@ -1,5 +1,4 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.37411.7
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -15,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelemetrySimulator", "..\Te
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IcdModelsLibrary", "..\IcdModelsLibrary\IcdModelsLibrary.csproj", "{06D39580-1448-F40D-D790-C992729DB794}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DecoderLibrary", "..\DecoderLibrary\DecoderLibrary.csproj", "{171C56B0-610F-490C-9164-64852BE82D4C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,6 +39,10 @@ Global
 		{06D39580-1448-F40D-D790-C992729DB794}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{06D39580-1448-F40D-D790-C992729DB794}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{06D39580-1448-F40D-D790-C992729DB794}.Release|Any CPU.Build.0 = Release|Any CPU
+		{171C56B0-610F-490C-9164-64852BE82D4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{171C56B0-610F-490C-9164-64852BE82D4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{171C56B0-610F-490C-9164-64852BE82D4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{171C56B0-610F-490C-9164-64852BE82D4C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
