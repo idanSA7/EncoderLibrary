@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TelemetrySimulator.Configuration;
 using TelemetrySimulator.DTOs;
+using IcdModelsLIbrary;
 
 namespace TelemetrySimulator.Services
 {

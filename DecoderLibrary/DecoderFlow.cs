@@ -1,7 +1,6 @@
+using IcdModelsLIbrary;
 using System;
 using System.Collections.Generic;
-using IcdModelsLIbrary;
-
 
 namespace DecoderLibrary
 {
@@ -31,36 +30,78 @@ namespace DecoderLibrary
 
         private object ExtractFieldValue(IcdItem targetIcdItem, byte[] rawPacketBuffer)
         {
-            int byteOffsetLocation = targetIcdItem.Location;
-
             if (targetIcdItem.Type == DataType.Float)
             {
-                return DecoderMath.ReadFloat(rawPacketBuffer, byteOffsetLocation);
+                return DecoderMath.ReadFloat(rawPacketBuffer, targetIcdItem.Location);
             }
 
             if (targetIcdItem.Type == DataType.Int)
             {
-                if (targetIcdItem.Size == BIT_SIZE_8)
-                {
-                    return DecoderMath.ReadByte(rawPacketBuffer, byteOffsetLocation);
-                }
-
-                if (targetIcdItem.Size == BIT_SIZE_16)
-                {
-                    return targetIcdItem.IsSigned()
-                        ? DecoderMath.ReadInt16(rawPacketBuffer, byteOffsetLocation)
-                        : DecoderMath.ReadUInt16(rawPacketBuffer, byteOffsetLocation);
-                }
-
-                if (targetIcdItem.Size == BIT_SIZE_32)
-                {
-                    return targetIcdItem.IsSigned()
-                        ? DecoderMath.ReadInt32(rawPacketBuffer, byteOffsetLocation)
-                        : DecoderMath.ReadUInt32(rawPacketBuffer, byteOffsetLocation);
-                }
+                return ExtractIntegerFieldValue(targetIcdItem, rawPacketBuffer);
             }
 
-            throw new InvalidOperationException($"Unsupported type or size for item: {targetIcdItem.Name}");
+            throw new InvalidOperationException($"Unsupported type for item: {targetIcdItem.Name}");
+        }
+
+        private object ExtractIntegerFieldValue(IcdItem targetIcdItem, byte[] rawPacketBuffer)
+        {
+            int byteOffsetLocation = targetIcdItem.Location;
+
+            if (targetIcdItem.Size <= BIT_SIZE_8)
+            {
+                return ExtractSubByteOrSingleByteValue(targetIcdItem, rawPacketBuffer, byteOffsetLocation);
+            }
+
+            if (targetIcdItem.Size == BIT_SIZE_16)
+            {
+                return ExtractInt16Value(targetIcdItem, rawPacketBuffer, byteOffsetLocation);
+            }
+
+            if (targetIcdItem.Size == BIT_SIZE_32)
+            {
+                return ExtractInt32Value(targetIcdItem, rawPacketBuffer, byteOffsetLocation);
+            }
+
+            throw new InvalidOperationException($"Unsupported size {targetIcdItem.Size} for item: {targetIcdItem.Name}");
+        }
+
+        private object ExtractSubByteOrSingleByteValue(IcdItem targetIcdItem, byte[] rawPacketBuffer, int byteOffsetLocation)
+        {
+            byte rawByte = DecoderMath.ReadByte(rawPacketBuffer, byteOffsetLocation);
+
+            if (targetIcdItem.Size == BIT_SIZE_8 && string.IsNullOrWhiteSpace(targetIcdItem.Mask))
+            {
+                return rawByte;
+            }
+
+            byte bitMask = ResolveByteMask(targetIcdItem);
+            int bitShiftAmount = targetIcdItem.GetShiftFromMask();
+
+            return (byte)((rawByte & bitMask) >> bitShiftAmount);
+        }
+
+        private byte ResolveByteMask(IcdItem targetIcdItem)
+        {
+            if (!string.IsNullOrWhiteSpace(targetIcdItem.Mask))
+            {
+                return Convert.ToByte(targetIcdItem.Mask, 2);
+            }
+
+            return (byte)((1 << targetIcdItem.Size) - 1);
+        }
+
+        private object ExtractInt16Value(IcdItem targetIcdItem, byte[] rawPacketBuffer, int byteOffsetLocation)
+        {
+            return targetIcdItem.IsSigned()
+                ? DecoderMath.ReadInt16(rawPacketBuffer, byteOffsetLocation)
+                : DecoderMath.ReadUInt16(rawPacketBuffer, byteOffsetLocation);
+        }
+
+        private object ExtractInt32Value(IcdItem targetIcdItem, byte[] rawPacketBuffer, int byteOffsetLocation)
+        {
+            return targetIcdItem.IsSigned()
+                ? DecoderMath.ReadInt32(rawPacketBuffer, byteOffsetLocation)
+                : DecoderMath.ReadUInt32(rawPacketBuffer, byteOffsetLocation);
         }
     }
 }
