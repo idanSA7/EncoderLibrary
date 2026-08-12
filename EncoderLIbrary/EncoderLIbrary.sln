@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelemetrySimulator", "..\Te
 		{FEFBE4F7-5595-40C2-A858-73CDF7791ED8} = {FEFBE4F7-5595-40C2-A858-73CDF7791ED8}
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DecoderLibrary", "..\DecoderLibrary\DecoderLibrary.csproj", "{171C56B0-610F-490C-9164-64852BE82D4C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +34,10 @@ Global
 		{0C026750-0D34-45B5-8F29-7EF71A9D67A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0C026750-0D34-45B5-8F29-7EF71A9D67A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0C026750-0D34-45B5-8F29-7EF71A9D67A1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{171C56B0-610F-490C-9164-64852BE82D4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{171C56B0-610F-490C-9164-64852BE82D4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{171C56B0-610F-490C-9164-64852BE82D4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{171C56B0-610F-490C-9164-64852BE82D4C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
