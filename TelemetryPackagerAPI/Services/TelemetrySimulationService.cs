@@ -22,7 +22,6 @@ namespace TelemetrySimulator.Services
         private const string FLOAT_FORMAT_SPECIFIER = "F2";
 
         private const string FLOAT_TYPE_NAME = "float";
-        private const string DOUBLE_TYPE_NAME = "double";
 
         private readonly EncoderFlow _telemetryEncoderFlow = new EncoderFlow();
         private readonly IOptionsMonitor<NetworkSettings> _networkOptionsMonitor;
@@ -59,59 +58,26 @@ namespace TelemetrySimulator.Services
         private async Task ExecutePackagingLoop(TelemetrySimulationRequestDto configuration, CancellationToken cancellationToken)
         {
             using UdpClient targetUdpSocketClient = new UdpClient();
-
-            // Access target IP strongly-typed via Options Pattern
             string targetIp = _networkOptionsMonitor.CurrentValue.TargetIp;
 
             try
             {
-                string icdFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ICD_DIRECTORY_NAME, ICD_FILE_NAME);
+                IcdModel targetIcdDefinition = await LoadIcdDefinitionAsync(cancellationToken);
 
-                Console.WriteLine($"[DEBUG] Looking for ICD file at: {icdFilePath}");
-
-                if (!File.Exists(icdFilePath))
+                if (targetIcdDefinition == null)
                 {
-                    Console.WriteLine("[ERROR] The ICD file was NOT FOUND! Aborting UDP broadcast.");
                     return;
                 }
-
-                Console.WriteLine("[DEBUG] ICD file found successfully. Loading...");
-                string icdJsonContent = await File.ReadAllTextAsync(icdFilePath, cancellationToken);
-
-                IcdModel targetIcdDefinition = IcdModel.LoadFromJson(icdJsonContent)
-                                               ?? throw new InvalidOperationException("Failed to load ICD file.");
 
                 Console.WriteLine($"[DEBUG] Starting UDP broadcast to IP: {targetIp}, Port: {configuration.DestinationNetworkPort}");
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    Dictionary<string, string> currentTelemetryInputs = GenerateRandomTelemetryInputs(targetIcdDefinition);
-
-                    if (configuration.TelemetryInputs != null && configuration.TelemetryInputs.Count > 0)
-                    {
-                        foreach (KeyValuePair<string, string> input in configuration.TelemetryInputs)
-                        {
-                            currentTelemetryInputs[input.Key] = input.Value;
-                        }
-                    }
+                    Dictionary<string, string> currentTelemetryInputs = PrepareTelemetryData(targetIcdDefinition, configuration);
 
                     byte[] encodedPacketBuffer = _telemetryEncoderFlow.Encode(targetIcdDefinition, currentTelemetryInputs);
 
-                    if (encodedPacketBuffer != null && encodedPacketBuffer.Length > 0)
-                    {
-                        await targetUdpSocketClient.SendAsync(
-                            encodedPacketBuffer,
-                            encodedPacketBuffer.Length,
-                            targetIp,
-                            configuration.DestinationNetworkPort
-                        );
-
-                        Console.WriteLine($"[SUCCESS] UDP Packet sent! Size: {encodedPacketBuffer.Length} bytes.");
-                    }
-                    else
-                    {
-                        Console.WriteLine("[WARNING] Encoder returned an empty or null buffer.");
-                    }
+                    await TransmitPacketAsync(targetUdpSocketClient, encodedPacketBuffer, targetIp, configuration.DestinationNetworkPort);
 
                     await Task.Delay(configuration.TransmissionIntervalMilliseconds, cancellationToken);
                 }
@@ -129,6 +95,59 @@ namespace TelemetrySimulator.Services
             {
                 IsBroadcastingActive = false;
                 Console.WriteLine("[DEBUG] Broadcasting loop has completely terminated.");
+            }
+        }
+
+        private async Task<IcdModel> LoadIcdDefinitionAsync(CancellationToken cancellationToken)
+        {
+            string icdFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ICD_DIRECTORY_NAME, ICD_FILE_NAME);
+
+            Console.WriteLine($"[DEBUG] Looking for ICD file at: {icdFilePath}");
+
+            if (!File.Exists(icdFilePath))
+            {
+                Console.WriteLine("[ERROR] The ICD file was NOT FOUND! Aborting UDP broadcast.");
+                return null;
+            }
+
+            Console.WriteLine("[DEBUG] ICD file found successfully. Loading...");
+            string icdJsonContent = await File.ReadAllTextAsync(icdFilePath, cancellationToken);
+
+            return IcdModel.LoadFromJson(icdJsonContent)
+                   ?? throw new InvalidOperationException("Failed to load ICD file.");
+        }
+
+        private Dictionary<string, string> PrepareTelemetryData(IcdModel icd, TelemetrySimulationRequestDto configuration)
+        {
+            Dictionary<string, string> currentTelemetryInputs = GenerateRandomTelemetryInputs(icd);
+
+            if (configuration.TelemetryInputs != null && configuration.TelemetryInputs.Count > 0)
+            {
+                foreach (KeyValuePair<string, string> input in configuration.TelemetryInputs)
+                {
+                    currentTelemetryInputs[input.Key] = input.Value;
+                }
+            }
+
+            return currentTelemetryInputs;
+        }
+
+        private async Task TransmitPacketAsync(UdpClient targetUdpSocketClient, byte[] encodedPacketBuffer, string targetIp, int targetPort)
+        {
+            if (encodedPacketBuffer != null && encodedPacketBuffer.Length > 0)
+            {
+                await targetUdpSocketClient.SendAsync(
+                    encodedPacketBuffer,
+                    encodedPacketBuffer.Length,
+                    targetIp,
+                    targetPort
+                );
+
+                Console.WriteLine($"[SUCCESS] UDP Packet sent! Size: {encodedPacketBuffer.Length} bytes.");
+            }
+            else
+            {
+                Console.WriteLine("[WARNING] Encoder returned an empty or null buffer.");
             }
         }
 
@@ -166,7 +185,7 @@ namespace TelemetrySimulator.Services
                 int minVal = item.Min;
                 int maxVal = item.Max;
 
-                if (fieldType.Contains(FLOAT_TYPE_NAME) || fieldType.Contains(DOUBLE_TYPE_NAME))
+                if (fieldType.Contains(FLOAT_TYPE_NAME))
                 {
                     double range = maxVal - minVal;
                     double sample = (random.NextDouble() * range) + minVal;
