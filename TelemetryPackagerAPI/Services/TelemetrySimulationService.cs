@@ -1,4 +1,4 @@
-﻿using EncoderLIbrary;
+using EncoderLIbrary;
 using IcdModelsLIbrary;
 using Microsoft.Extensions.Options;
 using System;
