@@ -92,16 +92,42 @@ namespace DecoderLibrary
 
         private object ExtractInt16Value(IcdItem targetIcdItem, byte[] rawPacketBuffer, int byteOffsetLocation)
         {
-            return targetIcdItem.IsSigned()
-                ? DecoderMath.ReadInt16(rawPacketBuffer, byteOffsetLocation)
-                : DecoderMath.ReadUInt16(rawPacketBuffer, byteOffsetLocation);
+            uint rawBitsVal = ReadRawBits(targetIcdItem, rawPacketBuffer, byteOffsetLocation);
+
+            if (targetIcdItem.IsSigned())
+            {
+                return ApplySignExtension(rawBitsVal, targetIcdItem.Size);
+            }
+
+            return rawBitsVal;
         }
 
-        private object ExtractInt32Value(IcdItem targetIcdItem, byte[] rawPacketBuffer, int byteOffsetLocation)
+        private uint ReadRawBits(IcdItem targetIcdItem, byte[] rawPacketBuffer, int byteOffsetLocation)
         {
-            return targetIcdItem.IsSigned()
-                ? DecoderMath.ReadInt32(rawPacketBuffer, byteOffsetLocation)
-                : DecoderMath.ReadUInt32(rawPacketBuffer, byteOffsetLocation);
+            int bytesCount = (int)Math.Ceiling(targetIcdItem.Size / (double)DecoderMath.BITS_PER_BYTE);
+            uint rawBitsVal = 0;
+
+            for (int byteIndex = 0; byteIndex < bytesCount; byteIndex++)
+            {
+                int shiftIndex = (bytesCount - 1 - byteIndex) * DecoderMath.BITS_PER_BYTE;
+                rawBitsVal |= (uint)(rawPacketBuffer[byteOffsetLocation + byteIndex] << shiftIndex);
+            }
+
+            return rawBitsVal;
+        }
+
+        private int ApplySignExtension(uint finalUnsignedValue, int bitSize)
+        {
+            int signBitShift = bitSize - 1;
+            bool isNegative = (finalUnsignedValue & (1U << signBitShift)) != 0;
+
+            if (isNegative)
+            {
+                uint signExtensionMask = 0xFFFFFFFF << bitSize;
+                return (int)(finalUnsignedValue | signExtensionMask);
+            }
+
+            return (int)finalUnsignedValue;
         }
     }
 }
