@@ -7,7 +7,6 @@ namespace DecoderLibrary
     public class DecoderFlow
     {
         private const int BIT_SIZE_8 = 8;
-        private const int BIT_SIZE_16 = 16;
         private const int BIT_SIZE_32 = 32;
 
         public Dictionary<string, object> Decode(IcdModel icdModel, byte[] rawPacketBuffer)
@@ -52,14 +51,9 @@ namespace DecoderLibrary
                 return ExtractSubByteOrSingleByteValue(targetIcdItem, rawPacketBuffer, byteOffsetLocation);
             }
 
-            if (targetIcdItem.Size == BIT_SIZE_16)
+            if (targetIcdItem.Size <= BIT_SIZE_32)
             {
-                return ExtractInt16Value(targetIcdItem, rawPacketBuffer, byteOffsetLocation);
-            }
-
-            if (targetIcdItem.Size == BIT_SIZE_32)
-            {
-                return ExtractInt32Value(targetIcdItem, rawPacketBuffer, byteOffsetLocation);
+                return ExtractMultiByteValue(targetIcdItem, rawPacketBuffer, byteOffsetLocation);
             }
 
             throw new InvalidOperationException($"Unsupported size {targetIcdItem.Size} for item: {targetIcdItem.Name}");
@@ -90,7 +84,7 @@ namespace DecoderLibrary
             return (byte)((1 << targetIcdItem.Size) - 1);
         }
 
-        private object ExtractInt16Value(IcdItem targetIcdItem, byte[] rawPacketBuffer, int byteOffsetLocation)
+        private object ExtractMultiByteValue(IcdItem targetIcdItem, byte[] rawPacketBuffer, int byteOffsetLocation)
         {
             uint rawBitsVal = ReadRawBits(targetIcdItem, rawPacketBuffer, byteOffsetLocation);
 

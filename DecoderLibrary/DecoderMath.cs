@@ -1,5 +1,6 @@
 ﻿using System;
 using IcdModelsLIbrary;
+
 namespace DecoderLibrary
 {
     public static class DecoderMath
@@ -8,12 +9,17 @@ namespace DecoderLibrary
 
         public static byte ReadByte(byte[] buffer, int offset) => buffer[offset];
 
-        public static short ReadInt16(byte[] buffer, int offset) => BitConverter.ToInt16(buffer, offset);
-        public static int ReadInt32(byte[] buffer, int offset) => BitConverter.ToInt32(buffer, offset);
+        public static float ReadFloat(byte[] buffer, int offset)
+        {
+            byte[] floatBytes = new byte[4];
+            Array.Copy(buffer, offset, floatBytes, 0, 4);
 
-        public static ushort ReadUInt16(byte[] buffer, int offset) => BitConverter.ToUInt16(buffer, offset);
-        public static uint ReadUInt32(byte[] buffer, int offset) => BitConverter.ToUInt32(buffer, offset);
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(floatBytes);
+            }
 
-        public static float ReadFloat(byte[] buffer, int offset) => BitConverter.ToSingle(buffer, offset);
+            return BitConverter.ToSingle(floatBytes, 0);
+        }
     }
 }
