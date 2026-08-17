@@ -62,16 +62,25 @@ namespace DecoderLibrary
         private object ExtractSubByteOrSingleByteValue(IcdItem targetIcdItem, byte[] rawPacketBuffer, int byteOffsetLocation)
         {
             byte rawByte = DecoderMath.ReadByte(rawPacketBuffer, byteOffsetLocation);
+            uint finalUnsignedValue;
 
             if (targetIcdItem.Size == BIT_SIZE_8 && string.IsNullOrWhiteSpace(targetIcdItem.Mask))
             {
-                return rawByte;
+                finalUnsignedValue = rawByte;
+            }
+            else
+            {
+                byte bitMask = ResolveByteMask(targetIcdItem);
+                int bitShiftAmount = targetIcdItem.GetShiftFromMask();
+                finalUnsignedValue = (uint)((rawByte & bitMask) >> bitShiftAmount);
             }
 
-            byte bitMask = ResolveByteMask(targetIcdItem);
-            int bitShiftAmount = targetIcdItem.GetShiftFromMask();
+            if (targetIcdItem.IsSigned())
+            {
+                return ApplySignExtension(finalUnsignedValue, targetIcdItem.Size);
+            }
 
-            return (byte)((rawByte & bitMask) >> bitShiftAmount);
+            return (byte)finalUnsignedValue;
         }
 
         private byte ResolveByteMask(IcdItem targetIcdItem)
@@ -110,7 +119,7 @@ namespace DecoderLibrary
             return rawBitsVal;
         }
 
-        private int ApplySignExtension(uint finalUnsignedValue, int bitSize)
+        private int  ApplySignExtension(uint finalUnsignedValue, int bitSize)
         {
             int signBitShift = bitSize - 1;
             bool isNegative = (finalUnsignedValue & (1U << signBitShift)) != 0;

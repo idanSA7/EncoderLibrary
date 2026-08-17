@@ -17,22 +17,20 @@ namespace TelemetrySimulator.Services
         private const string ICD_DIRECTORY_NAME = "IcdDefinitions";
         private const string ICD_FILE_NAME = "FlightBoxDownIcd.json";
 
-        private const string SYNC_FIELD_VALUE = "172";
-        private const string LENGTH_FIELD_VALUE = "38";
-        private const string FLOAT_FORMAT_SPECIFIER = "F2";
-
-        private const string FLOAT_TYPE_NAME = "float";
-
         private readonly EncoderFlow _telemetryEncoderFlow = new EncoderFlow();
         private readonly IOptionsMonitor<NetworkSettings> _networkOptionsMonitor;
+        private readonly ITelemetryDataGenerator _dataGenerator; 
+
         private CancellationTokenSource? _transmissionCancellationTokenSource;
-        private byte _packetCounter = 0;
 
         public bool IsBroadcastingActive { get; private set; }
 
-        public TelemetrySimulationService(IOptionsMonitor<NetworkSettings> networkOptionsMonitor)
+        public TelemetrySimulationService(
+            IOptionsMonitor<NetworkSettings> networkOptionsMonitor,
+            ITelemetryDataGenerator dataGenerator) 
         {
             _networkOptionsMonitor = networkOptionsMonitor;
+            _dataGenerator = dataGenerator;
         }
 
         public void StopPackagingAndBroadcasting()
@@ -73,11 +71,13 @@ namespace TelemetrySimulator.Services
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    Dictionary<string, string> currentTelemetryInputs = PrepareTelemetryData(targetIcdDefinition, configuration);
+                    Dictionary<string, string> currentTelemetryInputs = _dataGenerator.PrepareTelemetryData(targetIcdDefinition, configuration);
 
                     byte[] encodedPacketBuffer = _telemetryEncoderFlow.Encode(targetIcdDefinition, currentTelemetryInputs);
 
                     await TransmitPacketAsync(targetUdpSocketClient, encodedPacketBuffer, targetIp, configuration.DestinationNetworkPort);
+
+                    Console.WriteLine($"[TEST] Copy this to Console App:\nbyte[] testPacket = new byte[] {{ {string.Join(", ", encodedPacketBuffer)} }};");
 
                     await Task.Delay(configuration.TransmissionIntervalMilliseconds, cancellationToken);
                 }
@@ -117,21 +117,6 @@ namespace TelemetrySimulator.Services
                    ?? throw new InvalidOperationException("Failed to load ICD file.");
         }
 
-        private Dictionary<string, string> PrepareTelemetryData(IcdModel icd, TelemetrySimulationRequestDto configuration)
-        {
-            Dictionary<string, string> currentTelemetryInputs = GenerateRandomTelemetryInputs(icd);
-
-            if (configuration.TelemetryInputs != null && configuration.TelemetryInputs.Count > 0)
-            {
-                foreach (KeyValuePair<string, string> input in configuration.TelemetryInputs)
-                {
-                    currentTelemetryInputs[input.Key] = input.Value;
-                }
-            }
-
-            return currentTelemetryInputs;
-        }
-
         private async Task TransmitPacketAsync(UdpClient targetUdpSocketClient, byte[] encodedPacketBuffer, string targetIp, int targetPort)
         {
             if (encodedPacketBuffer != null && encodedPacketBuffer.Length > 0)
@@ -149,82 +134,6 @@ namespace TelemetrySimulator.Services
             {
                 Console.WriteLine("[WARNING] Encoder returned an empty or null buffer.");
             }
-        }
-
-        private Dictionary<string, string> GenerateRandomTelemetryInputs(IcdModel icd)
-        {
-            Random random = new Random();
-            Dictionary<string, string> randomInputs = new Dictionary<string, string>();
-
-            _packetCounter++;
-
-            foreach (IcdItem item in icd.IcdItems)
-            {
-                string fieldName = item.Name;
-                string fieldType = item.Type.ToString().ToLower();
-                SpecialTelemetryField specialField = ParseSpecialField(fieldName);
-
-                if (specialField == SpecialTelemetryField.Sync)
-                {
-                    randomInputs[fieldName] = SYNC_FIELD_VALUE;
-                    continue;
-                }
-
-                if (specialField == SpecialTelemetryField.Counter)
-                {
-                    randomInputs[fieldName] = _packetCounter.ToString();
-                    continue;
-                }
-
-                if (specialField == SpecialTelemetryField.Length)
-                {
-                    randomInputs[fieldName] = LENGTH_FIELD_VALUE;
-                    continue;
-                }
-
-                int minVal = item.Min;
-                int maxVal = item.Max;
-
-                if (fieldType.Contains(FLOAT_TYPE_NAME))
-                {
-                    double range = maxVal - minVal;
-                    double sample = (random.NextDouble() * range) + minVal;
-                    randomInputs[fieldName] = sample.ToString(FLOAT_FORMAT_SPECIFIER);
-                }
-                else
-                {
-                    if (minVal == maxVal)
-                    {
-                        randomInputs[fieldName] = minVal.ToString();
-                    }
-                    else
-                    {
-                        randomInputs[fieldName] = random.Next(minVal, maxVal + 1).ToString();
-                    }
-                }
-            }
-
-            return randomInputs;
-        }
-
-        private SpecialTelemetryField ParseSpecialField(string fieldName)
-        {
-            if (fieldName.Equals(nameof(SpecialTelemetryField.Sync), StringComparison.OrdinalIgnoreCase))
-            {
-                return SpecialTelemetryField.Sync;
-            }
-
-            if (fieldName.Equals(nameof(SpecialTelemetryField.Counter), StringComparison.OrdinalIgnoreCase))
-            {
-                return SpecialTelemetryField.Counter;
-            }
-
-            if (fieldName.Equals(nameof(SpecialTelemetryField.Length), StringComparison.OrdinalIgnoreCase))
-            {
-                return SpecialTelemetryField.Length;
-            }
-
-            return SpecialTelemetryField.None;
         }
     }
 }
