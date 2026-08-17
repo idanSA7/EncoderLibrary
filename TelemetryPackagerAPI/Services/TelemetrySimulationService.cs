@@ -73,6 +73,8 @@ namespace TelemetrySimulator.Services
 
                     await SendPacketAsync(udpSocketClient, encodedPacketBuffer, targetIp, configuration.DestinationNetworkPort);
 
+                    Console.WriteLine($"[TEST] Copy this to Console App:\nbyte[] testPacket = new byte[] {{ {string.Join(", ", encodedPacketBuffer)} }};");
+
                     await Task.Delay(configuration.TransmissionIntervalMilliseconds, cancellationToken);
                 }
             }
