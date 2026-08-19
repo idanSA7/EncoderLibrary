@@ -23,58 +23,75 @@ namespace TelemetryDeviceAPI.Services
 
 
         public PacketQueueService(
-            IKafkaProducerService kafkaProducer,
-            DecoderFlow decoderFlow,
-            IcdModel icdModel,
-            IConfiguration configuration,
-            ILogger<PacketQueueService> logger)
+        IKafkaProducerService kafkaProducer,
+        DecoderFlow decoderFlow,
+        IcdModel icdModel,
+        IConfiguration configuration,
+        ILogger<PacketQueueService> logger)
         {
             _logger = logger;
             _topic = configuration[KAFKA_TOPIC_CONFIG_KEY] ?? DEFAULT_KAFKA_TOPIC;
 
             _bufferBlock = new BufferBlock<byte[]>();
+            _decodeTransformBlock = CreateDecodeTransformBlock(decoderFlow, icdModel);
+            _kafkaActionBlock = CreateKafkaActionBlock(kafkaProducer);
 
-            _decodeTransformBlock = new TransformBlock<byte[], string?>(
-                (byte[] packet) =>
-                {
-                    try
-                    {
-                        Dictionary<string, object> decodedPacket = decoderFlow.Decode(icdModel, packet);
-                        return JsonSerializer.Serialize(decodedPacket);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error while decoding packet.");
-                        return null;
-                    }
-                },
+            LinkPipelineBlocks();
+        }
+
+        private TransformBlock<byte[], string?> CreateDecodeTransformBlock(DecoderFlow decoderFlow, IcdModel icdModel)
+        {
+            return new TransformBlock<byte[], string?>(
+                (byte[] packet) => DecodeAndSerializePacket(packet, decoderFlow, icdModel),
                 new ExecutionDataflowBlockOptions
                 {
                     MaxDegreeOfParallelism = Environment.ProcessorCount
                 });
+        }
 
-            _kafkaActionBlock = new ActionBlock<string?>(
-                async (string? jsonPacket) =>
-                {
-                    if (string.IsNullOrEmpty(jsonPacket))
-                    {
-                        return;
-                    }
+        private string? DecodeAndSerializePacket(byte[] packet, DecoderFlow decoderFlow, IcdModel icdModel)
+        {
+            try
+            {
+                Dictionary<string, object> decodedPacket = decoderFlow.Decode(icdModel, packet);
+                return JsonSerializer.Serialize(decodedPacket);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while decoding packet.");
+                return null;
+            }
+        }
 
-                    try
-                    {
-                        await kafkaProducer.ProduceAsync(_topic, jsonPacket);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error while processing and sending packet to Kafka.");
-                    }
-                },
+        private ActionBlock<string?> CreateKafkaActionBlock(IKafkaProducerService kafkaProducer)
+        {
+            return new ActionBlock<string?>(
+                async (string? jsonPacket) => await SendPacketToKafkaAsync(jsonPacket, kafkaProducer),
                 new ExecutionDataflowBlockOptions
                 {
                     MaxDegreeOfParallelism = Environment.ProcessorCount
                 });
+        }
 
+        private async Task SendPacketToKafkaAsync(string? jsonPacket, IKafkaProducerService kafkaProducer)
+        {
+            if (string.IsNullOrEmpty(jsonPacket))
+            {
+                return;
+            }
+
+            try
+            {
+                await kafkaProducer.ProduceAsync(_topic, jsonPacket);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while processing and sending packet to Kafka.");
+            }
+        }
+
+        private void LinkPipelineBlocks()
+        {
             DataflowLinkOptions linkOptions = new DataflowLinkOptions
             {
                 PropagateCompletion = true
