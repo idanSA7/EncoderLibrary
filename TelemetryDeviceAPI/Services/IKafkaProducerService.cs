@@ -1,7 +1,9 @@
-﻿namespace TelemetryDeviceAPI.Services
+﻿using System.Threading.Tasks;
+
+namespace TelemetryDeviceAPI.Services
 {
     public interface IKafkaProducerService
     {
-        public Task ProduceAsync(string topic, byte[] messageContent);
+        public Task ProduceAsync(string topic, string jsonContent);
     }
 }

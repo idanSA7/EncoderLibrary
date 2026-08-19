@@ -16,4 +16,9 @@
     <Folder Include="DTOs\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DecoderLibrary\DecoderLibrary.csproj" />
+    <ProjectReference Include="..\IcdModelsLibrary\IcdModelsLibrary.csproj" />
+  </ItemGroup>
+
 </Project>
