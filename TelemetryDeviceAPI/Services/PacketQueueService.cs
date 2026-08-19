@@ -1,20 +1,27 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using IcdModelsLIbrary;
+using DecoderLibrary;
 
 namespace TelemetryDeviceAPI.Services
 {
     public class PacketQueueService : IPacketQueueService
     {
         private readonly BufferBlock<byte[]> _bufferBlock;
-        private readonly ActionBlock<byte[]> _kafkaActionBlock;
+        private readonly TransformBlock<byte[], string?> _decodeTransformBlock;
+        private readonly ActionBlock<string?> _kafkaActionBlock;
         private readonly ILogger<PacketQueueService> _logger;
         private readonly string _topic;
 
         public PacketQueueService(
             IKafkaProducerService kafkaProducer,
+            DecoderFlow decoderFlow,
+            IcdModel icdModel,
             IConfiguration configuration,
             ILogger<PacketQueueService> logger)
         {
@@ -23,12 +30,36 @@ namespace TelemetryDeviceAPI.Services
 
             _bufferBlock = new BufferBlock<byte[]>();
 
-            _kafkaActionBlock = new ActionBlock<byte[]>(
-                async (byte[] packet) =>
+            _decodeTransformBlock = new TransformBlock<byte[], string?>(
+                (byte[] packet) =>
                 {
                     try
                     {
-                        await kafkaProducer.ProduceAsync(_topic, packet);
+                        Dictionary<string, object> decodedPacket = decoderFlow.Decode(icdModel, packet);
+                        return JsonSerializer.Serialize(decodedPacket);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error while decoding packet.");
+                        return null;
+                    }
+                },
+                new ExecutionDataflowBlockOptions
+                {
+                    MaxDegreeOfParallelism = Environment.ProcessorCount
+                });
+
+            _kafkaActionBlock = new ActionBlock<string?>(
+                async (string? jsonPacket) =>
+                {
+                    if (string.IsNullOrEmpty(jsonPacket))
+                    {
+                        return;
+                    }
+
+                    try
+                    {
+                        await kafkaProducer.ProduceAsync(_topic, jsonPacket);
                     }
                     catch (Exception ex)
                     {
@@ -40,10 +71,13 @@ namespace TelemetryDeviceAPI.Services
                     MaxDegreeOfParallelism = Environment.ProcessorCount
                 });
 
-            _bufferBlock.LinkTo(_kafkaActionBlock, new DataflowLinkOptions
+            DataflowLinkOptions linkOptions = new DataflowLinkOptions
             {
                 PropagateCompletion = true
-            });
+            };
+
+            _bufferBlock.LinkTo(_decodeTransformBlock, linkOptions);
+            _decodeTransformBlock.LinkTo(_kafkaActionBlock, linkOptions);
         }
 
         public bool Enqueue(byte[] packet)
