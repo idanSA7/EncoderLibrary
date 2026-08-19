@@ -8,10 +8,12 @@ namespace TelemetryDeviceAPI.Services
     public class KafkaProducerService : IKafkaProducerService, IDisposable
     {
         private readonly IProducer<Null, string> _producer;
+        private const string KAFKA_BOOTSTRAP_SERVERS_CONFIG_KEY = "Kafka:BootstrapServers";
+        private const string DEFAULT_BOOTSTRAP_SERVERS = "localhost:9092";
 
         public KafkaProducerService(IConfiguration configuration)
         {
-            string bootstrapServers = configuration["Kafka:BootstrapServers"] ?? "localhost:9092";
+            string bootstrapServers = configuration[KAFKA_BOOTSTRAP_SERVERS_CONFIG_KEY] ?? DEFAULT_BOOTSTRAP_SERVERS;
 
             ProducerConfig config = new ProducerConfig
             {
