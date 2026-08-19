@@ -18,6 +18,10 @@ namespace TelemetryDeviceAPI.Services
         private readonly ILogger<PacketQueueService> _logger;
         private readonly string _topic;
 
+        private const string KAFKA_TOPIC_CONFIG_KEY = "Kafka:Topic";
+        private const string DEFAULT_KAFKA_TOPIC = "telemetry-packets";
+
+
         public PacketQueueService(
             IKafkaProducerService kafkaProducer,
             DecoderFlow decoderFlow,
@@ -26,7 +30,7 @@ namespace TelemetryDeviceAPI.Services
             ILogger<PacketQueueService> logger)
         {
             _logger = logger;
-            _topic = configuration["Kafka:Topic"] ?? "telemetry-packets";
+            _topic = configuration[KAFKA_TOPIC_CONFIG_KEY] ?? DEFAULT_KAFKA_TOPIC;
 
             _bufferBlock = new BufferBlock<byte[]>();
 
