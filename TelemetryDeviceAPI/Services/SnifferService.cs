@@ -2,7 +2,7 @@
 
 namespace TelemetryDeviceAPI.Services
 {
-    public class SnifferService : ISnifferService
+    public class SnifferService : ISnifferService,IDisposable
     {
         private readonly IPacketQueueService _queueService;
         private readonly ILogger<SnifferService> _logger;
@@ -58,8 +58,26 @@ namespace TelemetryDeviceAPI.Services
                 _queueService.Enqueue(rawPacket.Data);
             }
         }
-        public void StopSniffing() {
+        public void StopSniffing()
+        {
+            if (!IsRunning || _device == null)
+            {
+                return;
+            }
 
+            _device.StopCapture();
+
+            _device.Close();
+
+            _device.OnPacketArrival -= Device_OnPacketArrival;
+
+            IsRunning = false;
+
+            _logger.LogInformation("Sniffer stopped.");
+        }
+        public void Dispose()
+        {
+            StopSniffing();
         }
     }
 }
