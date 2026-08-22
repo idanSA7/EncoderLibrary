@@ -1,4 +1,5 @@
-﻿using TelemetrySimulator.DTOs;
+﻿using EncoderLIbrary;
+using TelemetrySimulator.DTOs;
 
 namespace TelemetrySimulator.Services
 {
