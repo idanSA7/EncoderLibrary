@@ -8,6 +8,8 @@ namespace DecoderLibrary
     {
         private const int BIT_SIZE_8 = 8;
         private const int BIT_SIZE_32 = 32;
+        private const uint FULL_BIT_MASK_32_BITS = 0xFFFFFFFF;
+        private const uint SINGLE_BIT_MASK = 1U;
 
         public Dictionary<string, object> Decode(IcdModel icdModel, byte[] rawPacketBuffer)
         {
@@ -48,7 +50,7 @@ namespace DecoderLibrary
 
             if (targetIcdItem.Size <= BIT_SIZE_8)
             {
-                return ExtractSubByteOrSingleByteValue(targetIcdItem, rawPacketBuffer, byteOffsetLocation);
+                return ExtractSingleByteValue(targetIcdItem, rawPacketBuffer, byteOffsetLocation);
             }
 
             if (targetIcdItem.Size <= BIT_SIZE_32)
@@ -59,7 +61,7 @@ namespace DecoderLibrary
             throw new InvalidOperationException($"Unsupported size {targetIcdItem.Size} for item: {targetIcdItem.Name}");
         }
 
-        private object ExtractSubByteOrSingleByteValue(IcdItem targetIcdItem, byte[] rawPacketBuffer, int byteOffsetLocation)
+        private object ExtractSingleByteValue(IcdItem targetIcdItem, byte[] rawPacketBuffer, int byteOffsetLocation)
         {
             byte rawByte = DecoderMath.ReadByte(rawPacketBuffer, byteOffsetLocation);
             uint finalUnsignedValue;
@@ -119,14 +121,15 @@ namespace DecoderLibrary
             return rawBitsVal;
         }
 
-        private int  ApplySignExtension(uint finalUnsignedValue, int bitSize)
+        // Converts N-bit signed value to a standard 32-bit signed int 
+        private int ApplySignExtension(uint finalUnsignedValue, int bitSize)
         {
             int signBitShift = bitSize - 1;
-            bool isNegative = (finalUnsignedValue & (1U << signBitShift)) != 0;
+            bool isNegative = (finalUnsignedValue & (SINGLE_BIT_MASK << signBitShift)) != 0;
 
             if (isNegative)
             {
-                uint signExtensionMask = 0xFFFFFFFF << bitSize;
+                uint signExtensionMask = FULL_BIT_MASK_32_BITS << bitSize;
                 return (int)(finalUnsignedValue | signExtensionMask);
             }
 
