@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EncoderLIbrary\EncoderLIbrary.csproj" />
+    <ProjectReference Include="..\IcdModelsLibrary\IcdModelsLibrary.csproj" />
   </ItemGroup>
 
 </Project>
