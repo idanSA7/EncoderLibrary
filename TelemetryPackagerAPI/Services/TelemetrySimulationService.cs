@@ -18,13 +18,11 @@ namespace TelemetrySimulator.Services
         private const string ICD_FILE_NAME = "FlightBoxDownIcd.json";
 
         private readonly EncoderFlow _telemetryEncoderFlow = new EncoderFlow();
-
         private readonly NetworkSettings _networkSettings;
         private readonly ITelemetryDataGenerator _dataGenerator;
+        private readonly IcdModel _icdDefinition;
 
-        private readonly IcdModel _targetIcdDefinition;
-
-        private CancellationTokenSource? _cts;
+        private CancellationTokenSource? _cancellationTokenSource;
 
         public bool IsBroadcastingActive { get; private set; }
 
@@ -34,32 +32,32 @@ namespace TelemetrySimulator.Services
         {
             _networkSettings = networkOptions.Value;
             _dataGenerator = dataGenerator;
-            _targetIcdDefinition = LoadIcdDefinition();
+            _icdDefinition = LoadIcdDefinition();
         }
 
-        public void Stop()
+        public void StopBroadcasting()
         {
             if (!IsBroadcastingActive) return;
 
-            _cts?.Cancel();
+            _cancellationTokenSource?.Cancel();
             IsBroadcastingActive = false;
         }
 
-        public bool Start(TelemetrySimulationRequestDto configuration)
+        public bool StartBroadcasting(TelemetrySimulationRequestDto configuration)
         {
             if (IsBroadcastingActive) return false;
 
             IsBroadcastingActive = true;
-            _cts = new CancellationTokenSource();
+            _cancellationTokenSource = new CancellationTokenSource();
 
-            Task.Run(() => ExecutePackagingLoop(configuration, _cts.Token));
+            Task.Run(() => ExecutePackagingLoop(configuration, _cancellationTokenSource.Token));
 
             return true;
         }
 
         private async Task ExecutePackagingLoop(TelemetrySimulationRequestDto configuration, CancellationToken cancellationToken)
         {
-            using UdpClient targetUdpSocketClient = new UdpClient();
+            using UdpClient udpSocketClient = new UdpClient();
             string targetIp = _networkSettings.TargetIp;
 
             try
@@ -68,11 +66,11 @@ namespace TelemetrySimulator.Services
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    Dictionary<string, string> currentTelemetryInputs = _dataGenerator.PrepareTelemetryData(_targetIcdDefinition, configuration);
+                    Dictionary<string, string> currentTelemetryInputs = _dataGenerator.PrepareTelemetryData(_icdDefinition, configuration);
 
-                    byte[] encodedPacketBuffer = _telemetryEncoderFlow.Encode(_targetIcdDefinition, currentTelemetryInputs);
+                    byte[] encodedPacketBuffer = _telemetryEncoderFlow.Encode(_icdDefinition, currentTelemetryInputs);
 
-                    await TransmitPacketAsync(targetUdpSocketClient, encodedPacketBuffer, targetIp, configuration.DestinationNetworkPort);
+                    await SendPacketAsync(udpSocketClient, encodedPacketBuffer, targetIp, configuration.DestinationNetworkPort);
 
                     await Task.Delay(configuration.TransmissionIntervalMilliseconds, cancellationToken);
                 }
@@ -108,11 +106,11 @@ namespace TelemetrySimulator.Services
                    ?? throw new InvalidOperationException("Failed to parse ICD JSON configuration.");
         }
 
-        private async Task TransmitPacketAsync(UdpClient targetUdpSocketClient, byte[] encodedPacketBuffer, string targetIp, int targetPort)
+        private async Task SendPacketAsync(UdpClient udpSocketClient, byte[] encodedPacketBuffer, string targetIp, int targetPort)
         {
             if (encodedPacketBuffer != null && encodedPacketBuffer.Length > 0)
             {
-                await targetUdpSocketClient.SendAsync(
+                await udpSocketClient.SendAsync(
                     encodedPacketBuffer,
                     encodedPacketBuffer.Length,
                     targetIp,

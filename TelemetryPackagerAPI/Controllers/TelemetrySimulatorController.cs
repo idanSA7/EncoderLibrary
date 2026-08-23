@@ -27,7 +27,7 @@ namespace TelemetrySimulator.Controllers
                 return BadRequest(ModelState);
             }
 
-            bool isStarted = _telemetryService.Start(configuration);
+            bool isStarted = _telemetryService.StartBroadcasting(configuration);
 
             if (!isStarted)
             {
@@ -40,7 +40,7 @@ namespace TelemetrySimulator.Controllers
         [HttpPost("stop")]
         public IActionResult Stop()
         {
-            _telemetryService.Stop();
+            _telemetryService.StopBroadcasting();
             return Ok(new { message = BROADCAST_STOPPED_MESSAGE });
         }
     }

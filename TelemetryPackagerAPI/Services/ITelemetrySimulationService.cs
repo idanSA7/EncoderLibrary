@@ -4,8 +4,8 @@ namespace TelemetrySimulator.Services
 {
     public interface ITelemetrySimulationService
     {
-        bool Start(TelemetrySimulationRequestDto configuration);
-        void Stop();
         bool IsBroadcastingActive { get; }
+        bool StartBroadcasting(TelemetrySimulationRequestDto configuration);
+        void StopBroadcasting();
     }
 }
