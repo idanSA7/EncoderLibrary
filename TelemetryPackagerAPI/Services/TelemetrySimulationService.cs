@@ -22,7 +22,7 @@ namespace TelemetrySimulator.Services
         private readonly ITelemetryDataGenerator _dataGenerator;
         private readonly IcdModel _icdDefinition;
 
-        private CancellationTokenSource? _cancellationTokenSource;
+        private CancellationTokenSource? _simulationCancellationTokenSource;
 
         public bool IsBroadcastingActive { get; private set; }
 
@@ -39,7 +39,7 @@ namespace TelemetrySimulator.Services
         {
             if (!IsBroadcastingActive) return;
 
-            _cancellationTokenSource?.Cancel();
+            _simulationCancellationTokenSource?.Cancel();
             IsBroadcastingActive = false;
         }
 
@@ -48,9 +48,9 @@ namespace TelemetrySimulator.Services
             if (IsBroadcastingActive) return false;
 
             IsBroadcastingActive = true;
-            _cancellationTokenSource = new CancellationTokenSource();
+            _simulationCancellationTokenSource = new CancellationTokenSource();
 
-            Task.Run(() => ExecutePackagingLoop(configuration, _cancellationTokenSource.Token));
+            Task.Run(() => ExecutePackagingLoop(configuration, _simulationCancellationTokenSource.Token));
 
             return true;
         }
