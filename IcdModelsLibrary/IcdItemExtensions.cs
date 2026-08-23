@@ -1,4 +1,4 @@
-namespace EncoderLIbrary
+namespace IcdModelsLIbrary
 {
     public static class IcdItemExtensions
     {
@@ -23,6 +23,10 @@ namespace EncoderLIbrary
             }
 
             return 0;
+        }
+        public static bool IsSigned(this IcdItem item)
+        {
+            return item != null && item.Min < 0;
         }
     }
 }
