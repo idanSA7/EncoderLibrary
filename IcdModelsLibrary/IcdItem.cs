@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace EncoderLIbrary
+namespace IcdModelsLIbrary
 {
     public class IcdItem : IItem
     {
