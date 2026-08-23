@@ -8,11 +8,12 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configure Options Pattern for NetworkSettings
+// Configure Options Pattern for NetworkSettings using nameof
 builder.Services.Configure<NetworkSettings>(
-    builder.Configuration.GetSection(NetworkSettings.SectionName));
+    builder.Configuration.GetSection(nameof(NetworkSettings)));
 
-// Register Telemetry Simulation Service
+// Register Data Generator and Telemetry Simulation Service
+builder.Services.AddSingleton<ITelemetryDataGenerator, TelemetryDataGenerator>();
 builder.Services.AddSingleton<ITelemetrySimulationService, TelemetrySimulationService>();
 
 WebApplication app = builder.Build();

@@ -2,7 +2,7 @@
 using TelemetrySimulator.DTOs;
 using TelemetrySimulator.Services;
 
-namespace TelemetrySimulator.Services
+namespace TelemetrySimulator.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -27,7 +27,7 @@ namespace TelemetrySimulator.Services
                 return BadRequest(ModelState);
             }
 
-            bool isStarted = _telemetryService.StartPackagingAndBroadcasting(configuration);
+            bool isStarted = _telemetryService.Start(configuration);
 
             if (!isStarted)
             {
@@ -40,7 +40,7 @@ namespace TelemetrySimulator.Services
         [HttpPost("stop")]
         public IActionResult Stop()
         {
-            _telemetryService.StopPackagingAndBroadcasting();
+            _telemetryService.Stop();
             return Ok(new { message = BROADCAST_STOPPED_MESSAGE });
         }
     }
