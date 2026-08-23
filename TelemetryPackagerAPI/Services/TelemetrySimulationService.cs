@@ -1,4 +1,4 @@
-﻿using EncoderLIbrary;
+using EncoderLIbrary;
 using IcdModelsLIbrary;
 using Microsoft.Extensions.Options;
 using System;
@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TelemetrySimulator.Configuration;
 using TelemetrySimulator.DTOs;
+using IcdModelsLIbrary;
 
 namespace TelemetrySimulator.Services
 {
@@ -71,6 +72,8 @@ namespace TelemetrySimulator.Services
                     byte[] encodedPacketBuffer = _telemetryEncoderFlow.Encode(_icdDefinition, currentTelemetryInputs);
 
                     await SendPacketAsync(udpSocketClient, encodedPacketBuffer, targetIp, configuration.DestinationNetworkPort);
+
+                    Console.WriteLine($"[TEST] Copy this to Console App:\nbyte[] testPacket = new byte[] {{ {string.Join(", ", encodedPacketBuffer)} }};");
 
                     await Task.Delay(configuration.TransmissionIntervalMilliseconds, cancellationToken);
                 }
