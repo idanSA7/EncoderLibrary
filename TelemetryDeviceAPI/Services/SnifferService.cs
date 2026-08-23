@@ -2,7 +2,7 @@
 
 namespace TelemetryDeviceAPI.Services
 {
-    public class SnifferService : ISnifferService,IDisposable
+    public class SnifferService : ISnifferService, IDisposable
     {
         private readonly IPacketQueueService _queueService;
         private readonly ILogger<SnifferService> _logger;
@@ -22,12 +22,14 @@ namespace TelemetryDeviceAPI.Services
                 _logger.LogWarning("Sniffer is already running.");
                 return;
             }
+
             CaptureDeviceList devices = CaptureDeviceList.Instance;
             if (devices.Count == 0)
             {
                 _logger.LogError("No network devices found. Ensure Npcap is installed.");
                 return;
             }
+
             if (string.IsNullOrEmpty(deviceName))
             {
                 _device = devices[0];
@@ -36,13 +38,24 @@ namespace TelemetryDeviceAPI.Services
             {
                 foreach (ILiveDevice device in devices)
                 {
-                    if (device.Name == deviceName)
+                    string description = device.Description ?? "";
+                    string name = device.Name ?? "";
+
+                    if (description.Contains(deviceName, StringComparison.OrdinalIgnoreCase) ||
+                        name.Contains(deviceName, StringComparison.OrdinalIgnoreCase))
                     {
                         _device = device;
                         break;
                     }
                 }
             }
+
+            if (_device == null)
+            {
+                _logger.LogError("Network device '{DeviceName}' was not found.", deviceName);
+                return;
+            }
+
             _device.OnPacketArrival += Device_OnPacketArrival;
             _device.Open(DeviceModes.Promiscuous, 1000);
             _device.StartCapture();
