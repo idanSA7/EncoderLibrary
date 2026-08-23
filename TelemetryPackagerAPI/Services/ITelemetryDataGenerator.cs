@@ -1,4 +1,5 @@
 ﻿using EncoderLIbrary;
+using IcdModelsLIbrary;
 using TelemetrySimulator.DTOs;
 
 namespace TelemetrySimulator.Services
