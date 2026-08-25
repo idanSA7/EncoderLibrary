@@ -22,6 +22,7 @@ namespace TelemetryDeviceAPI.Services
 
         private const string KAFKA_TOPIC_CONFIG_KEY = "Kafka:Topic";
         private const string DEFAULT_KAFKA_TOPIC = "telemetry-packets";
+        private const int DEFAULT_PORT_CONFIG = 5000;
         private const string TARGET_PORT_CONFIG_KEY = "packetsDestination:targetPort";
         private const byte SYNC_BYTE = 2;
 
@@ -37,7 +38,7 @@ namespace TelemetryDeviceAPI.Services
             _logger = logger;
             _topic = configuration[KAFKA_TOPIC_CONFIG_KEY] ?? DEFAULT_KAFKA_TOPIC;
 
-            int targetPort = configuration.GetValue<int>(TARGET_PORT_CONFIG_KEY, 5000);
+            int targetPort = configuration.GetValue<int>(TARGET_PORT_CONFIG_KEY, DEFAULT_PORT_CONFIG);
             try
             {
                 _dummyListener = new UdpClient(targetPort);

@@ -44,50 +44,59 @@ namespace TelemetryDeviceAPI.Services
                 return;
             }
 
+            _device = ResolveDevice(deviceName);
+            if (_device == null)
+            {
+                return;
+            }
+
+            InitializeAndStartCapture(_device);
+        }
+
+        private ILiveDevice? ResolveDevice(string? deviceName)
+        {
             CaptureDeviceList devices = CaptureDeviceList.Instance;
             if (devices.Count == 0)
             {
                 _logger.LogError("No network devices found. Ensure Npcap is installed.");
-                return;
+                return null;
             }
 
-            if (string.IsNullOrEmpty(deviceName))
+            if (string.IsNullOrWhiteSpace(deviceName))
             {
-                _device = devices[0];
-            }
-            else
-            {
-                foreach (ILiveDevice device in devices)
-                {
-                    string description = device.Description ?? "";
-                    string name = device.Name ?? "";
-
-                    if (description.Contains(deviceName, StringComparison.OrdinalIgnoreCase) ||
-                        name.Contains(deviceName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        _device = device;
-                        break;
-                    }
-                }
+                return devices[0];
             }
 
-            if (_device == null)
+            ILiveDevice? matchedDevice = devices.FirstOrDefault(d =>
+                (d.Description?.Contains(deviceName, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (d.Name?.Contains(deviceName, StringComparison.OrdinalIgnoreCase) ?? false));
+
+            if (matchedDevice == null)
             {
                 _logger.LogError("Network device '{DeviceName}' was not found.", deviceName);
-                return;
             }
 
-            _device.OnPacketArrival += Device_OnPacketArrival;
-            _device.Open(DeviceModes.Promiscuous, 1000);
+            return matchedDevice;
+        }
 
-            string bpfFilter = $"udp and dst port {_targetPort} and dst host {_targetIp} and src host {_sourceIp}";
-            _device.Filter = bpfFilter;
+        private void InitializeAndStartCapture(ILiveDevice device)
+        {
+            device.OnPacketArrival += Device_OnPacketArrival;
+            device.Open(DeviceModes.Promiscuous, 1000);
 
-            _device.StartCapture();
+            string bpfFilter = BuildBpfFilter();
+            device.Filter = bpfFilter;
+
+            device.StartCapture();
             IsRunning = true;
 
             _logger.LogInformation("Sniffer started on device: {DeviceDescription} with BPF Filter: '{Filter}'",
-                _device.Description, bpfFilter);
+                device.Description, bpfFilter);
+        }
+
+        private string BuildBpfFilter()
+        {
+            return $"udp and dst port {_targetPort} and dst host {_targetIp} and src host {_sourceIp}";
         }
 
         private void Device_OnPacketArrival(object sender, PacketCapture e)
