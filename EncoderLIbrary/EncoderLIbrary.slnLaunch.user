@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "..\\TelemetryPackagerAPI\\TelemetrySimulator.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "..\\TelemetryDeviceAPI\\TelemetryDeviceAPI.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]
