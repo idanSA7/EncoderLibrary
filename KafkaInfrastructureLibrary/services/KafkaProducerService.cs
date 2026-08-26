@@ -3,10 +3,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Threading.Tasks;
-using TelemetryDeviceAPI.Configuration;
-using TelemetryDeviceAPI.Interfaces;
+using KafkaInfrastructure.Configuration;
+using KafkaInfrastructure.Interfaces;
 
-namespace TelemetryDeviceAPI.Services
+namespace KafkaInfrastructure.Services
 {
     public class KafkaProducerService : IKafkaProducerService, IDisposable
     {

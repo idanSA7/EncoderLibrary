@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace TelemetryDeviceAPI.Interfaces
+namespace KafkaInfrastructure.Interfaces
 {
     public interface IKafkaProducerService
     {

@@ -1,5 +1,8 @@
 using DecoderLibrary;
 using IcdModelsLIbrary;
+using KafkaInfrastructure.Configuration;
+using KafkaInfrastructure.Interfaces;
+using KafkaInfrastructure.Services;
 using TelemetryDeviceAPI.Configuration;
 using TelemetryDeviceAPI.Interfaces;
 using TelemetryDeviceAPI.Pipeline;

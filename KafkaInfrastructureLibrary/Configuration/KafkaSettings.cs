@@ -1,4 +1,4 @@
-﻿namespace TelemetryDeviceAPI.Configuration
+﻿namespace KafkaInfrastructure.Configuration
 {
     public class KafkaSettings
     {
