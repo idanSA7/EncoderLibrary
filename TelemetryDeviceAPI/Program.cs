@@ -4,6 +4,7 @@ using KafkaIntegrationLibrary.Interfaces;
 using KafkaIntegrationLibrary.Services;
 using TelemetryDeviceAPI.Configuration;
 using TelemetryDeviceAPI.Interfaces;
+using TelemetryDeviceAPI.Pipeline;
 using TelemetryDeviceAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,10 @@ builder.Services.Configure<IcdSettings>(
     builder.Configuration.GetSection(nameof(IcdSettings)));
 
 builder.Services.AddSingleton<IKafkaProducerService, KafkaProducerService>();
+builder.Services.AddSingleton<FrameBuilderTransformManyBlock>();
+builder.Services.AddSingleton<KafkaProducerActionBlock>();
+builder.Services.AddSingleton<PacketDecoderTransformBlock>();
+builder.Services.AddSingleton<RawPacketBufferBlock>();
 builder.Services.AddSingleton<DecoderFlow>();
 builder.Services.AddSingleton<ISnifferService, SnifferService>();
 builder.Services.AddSingleton<IPacketQueueService, TelemetryPipelineService>();
