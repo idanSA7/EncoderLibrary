@@ -1,4 +1,4 @@
-﻿namespace KafkaIntegrationLibrary.Configuration
+namespace KafkaIntegrationLibrary.Configuration
 {
     public class KafkaSettings
     {
