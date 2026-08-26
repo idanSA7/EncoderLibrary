@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using SharpPcap;
 using System;
+using System.Linq;
 
 namespace TelemetryDeviceAPI.Services
 {
@@ -18,8 +19,7 @@ namespace TelemetryDeviceAPI.Services
         private const string TARGET_IP_CONFIG_KEY = "packetsDestination:targetIp";
         private const string SOURCE_IP_CONFIG_KEY = "packetsDestination:sourceIp";
 
-        private const int DEFAULT_PORT = 5000;
-        private const string DEFAULT_IP = "127.0.0.1";
+        private const int READ_TIMEOUT_MS = 1000;
 
         public bool IsRunning { get; private set; }
 
@@ -31,26 +31,26 @@ namespace TelemetryDeviceAPI.Services
             _queueService = queueService;
             _logger = logger;
 
-            _targetPort = configuration.GetValue<int>(TARGET_PORT_CONFIG_KEY, DEFAULT_PORT);
-            _targetIp = configuration[TARGET_IP_CONFIG_KEY] ?? DEFAULT_IP;
-            _sourceIp = configuration[SOURCE_IP_CONFIG_KEY] ?? DEFAULT_IP;
+            _targetPort = configuration.GetValue<int>(TARGET_PORT_CONFIG_KEY);
+            _targetIp = configuration[TARGET_IP_CONFIG_KEY] ?? string.Empty;
+            _sourceIp = configuration[SOURCE_IP_CONFIG_KEY] ?? string.Empty;
         }
 
-        public void StartSniffing(string? deviceName = null)
+        public bool StartSniffing(string? deviceName = null)
         {
             if (IsRunning)
             {
-                _logger.LogWarning("Sniffer is already running.");
-                return;
+                return false;
             }
 
             _device = ResolveDevice(deviceName);
             if (_device == null)
             {
-                return;
+                return false;
             }
 
             InitializeAndStartCapture(_device);
+            return true;
         }
 
         private ILiveDevice? ResolveDevice(string? deviceName)
@@ -67,9 +67,9 @@ namespace TelemetryDeviceAPI.Services
                 return devices[0];
             }
 
-            ILiveDevice? matchedDevice = devices.FirstOrDefault(d =>
-                (d.Description?.Contains(deviceName, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (d.Name?.Contains(deviceName, StringComparison.OrdinalIgnoreCase) ?? false));
+            ILiveDevice? matchedDevice = devices.FirstOrDefault(device =>
+                (device.Description?.Contains(deviceName, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (device.Name?.Contains(deviceName, StringComparison.OrdinalIgnoreCase) ?? false));
 
             if (matchedDevice == null)
             {
@@ -82,7 +82,7 @@ namespace TelemetryDeviceAPI.Services
         private void InitializeAndStartCapture(ILiveDevice device)
         {
             device.OnPacketArrival += Device_OnPacketArrival;
-            device.Open(DeviceModes.Promiscuous, 1000);
+            device.Open(DeviceModes.Promiscuous, READ_TIMEOUT_MS);
 
             string bpfFilter = BuildBpfFilter();
             device.Filter = bpfFilter;
@@ -108,11 +108,11 @@ namespace TelemetryDeviceAPI.Services
             }
         }
 
-        public void StopSniffing()
+        public bool StopSniffing()
         {
             if (!IsRunning || _device == null)
             {
-                return;
+                return false;
             }
 
             _device.StopCapture();
@@ -121,6 +121,7 @@ namespace TelemetryDeviceAPI.Services
 
             IsRunning = false;
             _logger.LogInformation("Sniffer stopped.");
+            return true;
         }
 
         public void Dispose()

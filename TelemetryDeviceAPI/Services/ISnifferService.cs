@@ -2,8 +2,8 @@
 {
     public interface ISnifferService
     {
-        void StartSniffing(string? deviceName = null);
-        void StopSniffing();
-        bool IsRunning { get; }
+        public bool StartSniffing(string? deviceName = null);
+        public bool StopSniffing();
+        public bool IsRunning { get; }
     }
 }

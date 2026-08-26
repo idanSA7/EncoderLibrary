@@ -1,5 +1,6 @@
 using DecoderLibrary;
 using IcdModelsLIbrary;
+using TelemetryDeviceAPI.Configuration;
 using TelemetryDeviceAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +14,8 @@ builder.Services.AddSingleton<DecoderFlow>();
 builder.Services.AddSingleton<IcdModel>();
 builder.Services.AddSingleton<IPacketQueueService, PacketQueueService>();
 builder.Services.AddSingleton<ISnifferService, SnifferService>();
+builder.Services.Configure<KafkaSettings>
+    (builder.Configuration.GetSection(nameof(KafkaSettings)));
 
 var app = builder.Build();
 

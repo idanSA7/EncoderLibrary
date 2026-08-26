@@ -4,8 +4,7 @@ namespace TelemetryDeviceAPI.Services
 {
     public interface IPacketQueueService
     {
-        bool Enqueue(byte[] packet);
-        void Complete();
-        Task Completion { get; }
+        public bool Enqueue(byte[] packet);
+       
     }
 }

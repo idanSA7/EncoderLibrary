@@ -1,23 +1,28 @@
 ﻿using Confluent.Kafka;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
+using TelemetryDeviceAPI.Configuration;
 
 namespace TelemetryDeviceAPI.Services
 {
     public class KafkaProducerService : IKafkaProducerService, IDisposable
     {
         private readonly IProducer<Null, string> _producer;
-        private const string KAFKA_BOOTSTRAP_SERVERS_CONFIG_KEY = "Kafka:BootstrapServers";
-        private const string DEFAULT_BOOTSTRAP_SERVERS = "localhost:9092";
+        private readonly ILogger<KafkaProducerService> _logger;
+        private readonly KafkaSettings _settings;
 
-        public KafkaProducerService(IConfiguration configuration)
+        public KafkaProducerService(
+            IOptions<KafkaSettings> options,
+            ILogger<KafkaProducerService> logger)
         {
-            string bootstrapServers = configuration[KAFKA_BOOTSTRAP_SERVERS_CONFIG_KEY] ?? DEFAULT_BOOTSTRAP_SERVERS;
+            _logger = logger;
+            _settings = options.Value;
 
             ProducerConfig config = new ProducerConfig
             {
-                BootstrapServers = bootstrapServers
+                BootstrapServers = _settings.BootstrapServers
             };
 
             _producer = new ProducerBuilder<Null, string>(config).Build();
@@ -31,17 +36,19 @@ namespace TelemetryDeviceAPI.Services
                 {
                     Value = jsonContent
                 };
+
                 await _producer.ProduceAsync(topic, message);
             }
-            catch (ProduceException<Null, string> ex) 
+            catch (ProduceException<Null, string> ex)
             {
-                Console.WriteLine($"[Kafka Error] Failed to send message to topic '{topic}'. Reason: {ex.Error.Reason}");
+                _logger.LogError(ex, "Failed to send message to Kafka topic '{Topic}'. Reason: {Reason}", topic, ex.Error.Reason);
             }
         }
 
         public void Dispose()
         {
-            _producer?.Flush(TimeSpan.FromSeconds(10));
+            int timeoutSeconds = _settings.FlushTimeoutSeconds > 0 ? _settings.FlushTimeoutSeconds : 10;
+            _producer?.Flush(TimeSpan.FromSeconds(timeoutSeconds));
             _producer?.Dispose();
         }
     }

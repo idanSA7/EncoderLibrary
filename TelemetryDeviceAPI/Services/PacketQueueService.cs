@@ -157,12 +157,7 @@ namespace TelemetryDeviceAPI.Services
             return _bufferBlock.Post(packet);
         }
 
-        public void Complete()
-        {
-            _bufferBlock.Complete();
-        }
-
-        public Task Completion => _kafkaActionBlock.Completion;
+      
 
         public void Dispose()
         {
