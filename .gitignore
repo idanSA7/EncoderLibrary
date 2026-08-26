@@ -3,3 +3,7 @@ bin/
 obj/
 *.csproj.user
 EncoderTests/
+
+*.sln
+*.csproj
+*.csproj.user
