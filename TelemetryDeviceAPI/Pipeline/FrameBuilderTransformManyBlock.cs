@@ -7,14 +7,14 @@ namespace TelemetryDeviceAPI.Pipeline
 {
     public class FrameBuilderTransformManyBlock
     {
-        private readonly TransformManyBlock<byte[], byte[]> _block;
+        private readonly TransformManyBlock<byte[], byte[]> _frameBuilderBlock;
         private readonly ILogger<FrameBuilderTransformManyBlock> _logger;
         private const byte SYNC_BYTE = 2;
 
         public FrameBuilderTransformManyBlock(ILogger<FrameBuilderTransformManyBlock> logger)
         {
             _logger = logger;
-            _block = new TransformManyBlock<byte[], byte[]>(
+            _frameBuilderBlock = new TransformManyBlock<byte[], byte[]>(
                 FilterAndBuildFrames,
                 new ExecutionDataflowBlockOptions
                 {
@@ -22,8 +22,8 @@ namespace TelemetryDeviceAPI.Pipeline
                 });
         }
 
-        public ITargetBlock<byte[]> Input => _block;
-        public ISourceBlock<byte[]> Output => _block;
+        public ITargetBlock<byte[]> Input => _frameBuilderBlock;
+        public ISourceBlock<byte[]> Output => _frameBuilderBlock;
 
         private IEnumerable<byte[]> FilterAndBuildFrames(byte[] rawPacket)
         {

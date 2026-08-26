@@ -20,6 +20,7 @@ builder.Services.AddSingleton<DecoderFlow>();
 builder.Services.AddSingleton<IcdModel>();
 builder.Services.AddSingleton<IPacketQueueService, TelemetryPipelineService>();
 builder.Services.AddSingleton<ISnifferService, SnifferService>();
+
 builder.Services.Configure<KafkaSettings>
     (builder.Configuration.GetSection(nameof(KafkaSettings)));
 

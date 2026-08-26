@@ -9,7 +9,7 @@ namespace TelemetryDeviceAPI.Pipeline
 {
     public class PacketDecoderTransformBlock
     {
-        private readonly TransformBlock<byte[], Dictionary<string, object>?> _block;
+        private readonly TransformBlock<byte[], Dictionary<string, object>?> _decodeTransformBlock;
         private readonly ILogger<PacketDecoderTransformBlock> _logger;
         private readonly DecoderFlow _decoderFlow;
         private readonly IcdModel _icdModel;
@@ -23,7 +23,7 @@ namespace TelemetryDeviceAPI.Pipeline
             _icdModel = icdModel;
             _logger = logger;
 
-            _block = new TransformBlock<byte[], Dictionary<string, object>?>(
+            _decodeTransformBlock = new TransformBlock<byte[], Dictionary<string, object>?>(
                 DecodePacket,
                 new ExecutionDataflowBlockOptions
                 {
@@ -31,8 +31,8 @@ namespace TelemetryDeviceAPI.Pipeline
                 });
         }
 
-        public ITargetBlock<byte[]> Input => _block;
-        public ISourceBlock<Dictionary<string, object>?> Output => _block;
+        public ITargetBlock<byte[]> Input => _decodeTransformBlock;
+        public ISourceBlock<Dictionary<string, object>?> Output => _decodeTransformBlock;
 
         private Dictionary<string, object>? DecodePacket(byte[] packet)
         {
