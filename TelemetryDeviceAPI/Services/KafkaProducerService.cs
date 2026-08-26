@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Threading.Tasks;
 using TelemetryDeviceAPI.Configuration;
+using TelemetryDeviceAPI.Interfaces;
 
 namespace TelemetryDeviceAPI.Services
 {

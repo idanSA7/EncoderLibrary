@@ -1,4 +1,4 @@
-﻿namespace TelemetryDeviceAPI.Services
+﻿namespace TelemetryDeviceAPI.Interfaces
 {
     public interface ISnifferService
     {

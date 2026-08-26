@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using TelemetryDeviceAPI.Services;
+using TelemetryDeviceAPI.Interfaces;
 
 namespace TelemetryDeviceAPI.Controllers
 {

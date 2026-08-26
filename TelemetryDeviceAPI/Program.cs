@@ -1,6 +1,7 @@
 using DecoderLibrary;
 using IcdModelsLIbrary;
 using TelemetryDeviceAPI.Configuration;
+using TelemetryDeviceAPI.Interfaces;
 using TelemetryDeviceAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,7 +13,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<IKafkaProducerService, KafkaProducerService>();
 builder.Services.AddSingleton<DecoderFlow>();
 builder.Services.AddSingleton<IcdModel>();
-builder.Services.AddSingleton<IPacketQueueService, PacketQueueService>();
+builder.Services.AddSingleton<IPacketQueueService, TelemetryPipelineService>();
 builder.Services.AddSingleton<ISnifferService, SnifferService>();
 builder.Services.Configure<KafkaSettings>
     (builder.Configuration.GetSection(nameof(KafkaSettings)));

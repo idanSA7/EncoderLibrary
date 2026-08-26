@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace TelemetryDeviceAPI.Services
+namespace TelemetryDeviceAPI.Interfaces
 {
     public interface IPacketQueueService
     {

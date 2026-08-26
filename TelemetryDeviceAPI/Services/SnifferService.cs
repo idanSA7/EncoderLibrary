@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SharpPcap;
 using System;
 using System.Linq;
+using TelemetryDeviceAPI.Interfaces;
 
 namespace TelemetryDeviceAPI.Services
 {

@@ -8,16 +8,17 @@ using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
+using TelemetryDeviceAPI.Interfaces;
 
 namespace TelemetryDeviceAPI.Services
 {
-    public class PacketQueueService : IPacketQueueService, IDisposable
+    public class TelemetryPipelineService : IPacketQueueService, IDisposable
     {
         private readonly BufferBlock<byte[]> _bufferBlock;
         private readonly TransformManyBlock<byte[], byte[]> _frameBuilderBlock;
         private readonly TransformBlock<byte[], string?> _decodeTransformBlock;
         private readonly ActionBlock<string?> _kafkaActionBlock;
-        private readonly ILogger<PacketQueueService> _logger;
+        private readonly ILogger<TelemetryPipelineService> _logger;
         private readonly string _topic;
 
         private const string KAFKA_TOPIC_CONFIG_KEY = "Kafka:Topic";
@@ -28,12 +29,12 @@ namespace TelemetryDeviceAPI.Services
 
         private readonly UdpClient? _dummyListener;
 
-        public PacketQueueService(
+        public TelemetryPipelineService(
             IKafkaProducerService kafkaProducer,
             DecoderFlow decoderFlow,
             IcdModel icdModel,
             IConfiguration configuration,
-            ILogger<PacketQueueService> logger)
+            ILogger<TelemetryPipelineService> logger)
         {
             _logger = logger;
             _topic = configuration[KAFKA_TOPIC_CONFIG_KEY] ?? DEFAULT_KAFKA_TOPIC;
