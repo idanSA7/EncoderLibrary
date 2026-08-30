@@ -1,9 +1,12 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SharpPcap;
+using PacketDotNet;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using TelemetryDeviceAPI.Interfaces;
+using TelemetryDeviceAPI.Models;
 
 namespace TelemetryDeviceAPI.Services
 {
@@ -11,12 +14,12 @@ namespace TelemetryDeviceAPI.Services
     {
         private readonly IPacketQueueService _queueService;
         private readonly ILogger<SnifferService> _logger;
-        private readonly int _targetPort;
+        private readonly int _basePort;
         private readonly string _targetIp;
         private readonly string _sourceIp;
         private ILiveDevice? _device;
 
-        private const string TARGET_PORT_CONFIG_KEY = "packetsDestination:targetPort";
+        private const string BASE_PORT_CONFIG_KEY = "TelemetrySettings:BasePort";
         private const string TARGET_IP_CONFIG_KEY = "packetsDestination:targetIp";
         private const string SOURCE_IP_CONFIG_KEY = "packetsDestination:sourceIp";
 
@@ -32,23 +35,17 @@ namespace TelemetryDeviceAPI.Services
             _queueService = queueService;
             _logger = logger;
 
-            _targetPort = configuration.GetValue<int>(TARGET_PORT_CONFIG_KEY);
+            _basePort = configuration.GetValue<int>(BASE_PORT_CONFIG_KEY, 11505);
             _targetIp = configuration[TARGET_IP_CONFIG_KEY] ?? string.Empty;
             _sourceIp = configuration[SOURCE_IP_CONFIG_KEY] ?? string.Empty;
         }
 
         public bool StartSniffing(string? deviceName = null)
         {
-            if (IsRunning)
-            {
-                return false;
-            }
+            if (IsRunning) return false;
 
             _device = ResolveDevice(deviceName);
-            if (_device == null)
-            {
-                return false;
-            }
+            if (_device == null) return false;
 
             InitializeAndStartCapture(_device);
             return true;
@@ -63,21 +60,11 @@ namespace TelemetryDeviceAPI.Services
                 return null;
             }
 
-            if (string.IsNullOrWhiteSpace(deviceName))
-            {
-                return devices[0];
-            }
+            if (string.IsNullOrWhiteSpace(deviceName)) return devices[0];
 
-            ILiveDevice? matchedDevice = devices.FirstOrDefault(device =>
+            return devices.FirstOrDefault(device =>
                 (device.Description?.Contains(deviceName, StringComparison.OrdinalIgnoreCase) ?? false) ||
                 (device.Name?.Contains(deviceName, StringComparison.OrdinalIgnoreCase) ?? false));
-
-            if (matchedDevice == null)
-            {
-                _logger.LogError("Network device '{DeviceName}' was not found.", deviceName);
-            }
-
-            return matchedDevice;
         }
 
         private void InitializeAndStartCapture(ILiveDevice device)
@@ -85,7 +72,7 @@ namespace TelemetryDeviceAPI.Services
             device.OnPacketArrival += Device_OnPacketArrival;
             device.Open(DeviceModes.Promiscuous, READ_TIMEOUT_MS);
 
-            string bpfFilter = BuildBpfFilter();
+            string bpfFilter = BuildDynamicBpfFilter();
             device.Filter = bpfFilter;
 
             device.StartCapture();
@@ -95,26 +82,51 @@ namespace TelemetryDeviceAPI.Services
                 device.Description, bpfFilter);
         }
 
-        private string BuildBpfFilter()
+        private string BuildDynamicBpfFilter()
         {
-            return $"udp and dst port {_targetPort} and dst host {_targetIp} and src host {_sourceIp}";
+            List<string> filterParts = new List<string>();
+
+            foreach (IcdType icdType in Enum.GetValues(typeof(IcdType)))
+            {
+                int targetPort = _basePort + (int)icdType;
+
+                string part = $"udp dst port {targetPort}";
+                if (!string.IsNullOrWhiteSpace(_targetIp)) part += $" and dst host {_targetIp}";
+                if (!string.IsNullOrWhiteSpace(_sourceIp)) part += $" and src host {_sourceIp}";
+
+                filterParts.Add($"({part})");
+            }
+
+            return string.Join(" or ", filterParts);
         }
 
         private void Device_OnPacketArrival(object sender, PacketCapture e)
         {
-            RawCapture rawPacket = e.GetPacket();
-            if (rawPacket != null && rawPacket.Data != null && rawPacket.Data.Length > 0)
+            RawCapture rawCapture = e.GetPacket();
+            if (rawCapture == null || rawCapture.Data == null || rawCapture.Data.Length == 0) return;
+
+            var parsedPacket = Packet.ParsePacket(rawCapture.LinkLayerType, rawCapture.Data);
+            var udpPacket = parsedPacket.Extract<UdpPacket>();
+
+            if (udpPacket != null)
             {
-                _queueService.Enqueue(rawPacket.Data);
+                int destPort = udpPacket.DestinationPort;
+                IcdType type = (IcdType)(destPort - _basePort);
+
+                var context = new PacketContext
+                {
+                    RawData = udpPacket.PayloadData,
+                    DestinationPort = destPort,
+                    IcdType = type
+                };
+
+                _queueService.Enqueue(context);
             }
         }
 
         public bool StopSniffing()
         {
-            if (!IsRunning || _device == null)
-            {
-                return false;
-            }
+            if (!IsRunning || _device == null) return false;
 
             _device.StopCapture();
             _device.Close();

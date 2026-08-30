@@ -1,10 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using TelemetryDeviceAPI.Models;
 
 namespace TelemetryDeviceAPI.Interfaces
 {
     public interface IPacketQueueService
     {
-        public bool Enqueue(byte[] packet);
-       
+        bool Enqueue(PacketContext context);
     }
 }

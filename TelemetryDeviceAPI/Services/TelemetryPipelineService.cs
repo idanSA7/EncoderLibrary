@@ -1,12 +1,12 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+﻿using DecoderLibrary;
+using IcdModelsLIbrary;
+using KafkaInfrastructure.Interfaces;
+using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 using System.Threading.Tasks.Dataflow;
 using TelemetryDeviceAPI.Interfaces;
+using TelemetryDeviceAPI.Models;
 using TelemetryDeviceAPI.Pipeline;
-using KafkaInfrastructure.Interfaces;
-using KafkaInfrastructure.Configuration;
-using DecoderLibrary;
-using IcdModelsLIbrary;
 
 namespace TelemetryDeviceAPI.Services
 {
@@ -19,16 +19,14 @@ namespace TelemetryDeviceAPI.Services
 
         public TelemetryPipelineService(
             IKafkaProducerService kafkaProducer,
-            IOptions<KafkaSettings> kafkaOptions,
             DecoderFlow decoderFlow,
-            IcdModel icdModel,
+            Dictionary<IcdType, IcdModel> icdModels,
             ILoggerFactory loggerFactory)
         {
-            // אתחול הבלוקים בתוך השירות כפי שהמנחה ביקש
             _bufferBlock = new RawPacketBuffer();
             _frameBuilderBlock = new FrameBuilderBlock(loggerFactory.CreateLogger<FrameBuilderBlock>());
-            _decodeBlock = new PacketDecoderBlock(decoderFlow, icdModel, loggerFactory.CreateLogger<PacketDecoderBlock>());
-            _kafkaBlock = new KafkaProducerBlock(kafkaProducer, kafkaOptions, loggerFactory.CreateLogger<KafkaProducerBlock>());
+            _decodeBlock = new PacketDecoderBlock(decoderFlow, icdModels, loggerFactory.CreateLogger<PacketDecoderBlock>());
+            _kafkaBlock = new KafkaProducerBlock(kafkaProducer, loggerFactory.CreateLogger<KafkaProducerBlock>());
 
             LinkPipeline();
         }
@@ -45,9 +43,9 @@ namespace TelemetryDeviceAPI.Services
             _decodeBlock.Output.LinkTo(_kafkaBlock.Input, linkOptions);
         }
 
-        public bool Enqueue(byte[] packet)
+        public bool Enqueue(PacketContext context)
         {
-            return _bufferBlock.Enqueue(packet);
+            return _bufferBlock.Enqueue(context);
         }
     }
 }

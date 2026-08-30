@@ -1,34 +1,27 @@
-﻿using KafkaInfrastructure.Configuration;
-using KafkaInfrastructure.Interfaces;
+﻿using KafkaInfrastructure.Interfaces;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using TelemetryDeviceAPI.Interfaces;
-using TelemetryDeviceAPI.Services;
+using TelemetryDeviceAPI.Models;
 
 namespace TelemetryDeviceAPI.Pipeline
 {
     public class KafkaProducerBlock
     {
-        private readonly ActionBlock<Dictionary<string, object>?> _block;
+        private readonly ActionBlock<PacketContext?> _block;
         private readonly IKafkaProducerService _kafkaProducer;
         private readonly ILogger<KafkaProducerBlock> _logger;
-        private readonly string _topic;
 
         public KafkaProducerBlock(
             IKafkaProducerService kafkaProducer,
-            IOptions<KafkaSettings> options,
             ILogger<KafkaProducerBlock> logger)
         {
             _kafkaProducer = kafkaProducer;
             _logger = logger;
-            _topic = options.Value.Topic;
 
-            _block = new ActionBlock<Dictionary<string, object>?>(
+            _block = new ActionBlock<PacketContext?>(
                 SendPacketToKafkaAsync,
                 new ExecutionDataflowBlockOptions
                 {
@@ -36,23 +29,26 @@ namespace TelemetryDeviceAPI.Pipeline
                 });
         }
 
-        public ITargetBlock<Dictionary<string, object>?> Input => _block;
+        public ITargetBlock<PacketContext?> Input => _block;
 
-        private async Task SendPacketToKafkaAsync(Dictionary<string, object>? decodedPacket)
+        private async Task SendPacketToKafkaAsync(PacketContext? context)
         {
-            if (decodedPacket == null)
+            if (context == null || context.DecodedData == null)
             {
                 return;
             }
 
             try
             {
-                string jsonPayload = JsonSerializer.Serialize(decodedPacket);
-                await _kafkaProducer.ProduceAsync(_topic, jsonPayload);
+                string dynamicTopicName = $"telemetry-{context.IcdType.ToString().ToLower()}";
+
+                string jsonPayload = JsonSerializer.Serialize(context.DecodedData);
+
+                await _kafkaProducer.ProduceAsync(dynamicTopicName, jsonPayload);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while serializing or sending packet to Kafka.");
+                _logger.LogError(ex, "Error while serializing or sending packet to Kafka for port {Port}.", context.DestinationPort);
             }
         }
     }

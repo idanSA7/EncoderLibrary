@@ -1,27 +1,30 @@
 ﻿using System.Threading.Tasks.Dataflow;
+using TelemetryDeviceAPI.Models;
 
 namespace TelemetryDeviceAPI.Pipeline
 {
     public class RawPacketBuffer
     {
-        private readonly BufferBlock<byte[]> _bufferBlock;
+        private readonly BufferBlock<PacketContext> _bufferBlock;
 
         public RawPacketBuffer()
         {
-            _bufferBlock = new BufferBlock<byte[]>();
+            _bufferBlock = new BufferBlock<PacketContext>();
         }
 
-        public ISourceBlock<byte[]> Output => _bufferBlock;//
+        public ISourceBlock<PacketContext> Output => _bufferBlock;
 
-        public bool Enqueue(byte[] packet)
+        public bool Enqueue(PacketContext context)
         {
-            if (packet == null || packet.Length == 0)
+            if (context.RawData == null || context.RawData.Length == 0)
             {
                 return false;
             }
 
-            return _bufferBlock.Post(packet);
+            return _bufferBlock.Post(context);
         }
 
     }
 }
+
+

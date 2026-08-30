@@ -2,19 +2,20 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks.Dataflow;
+using TelemetryDeviceAPI.Models;
 
 namespace TelemetryDeviceAPI.Pipeline
 {
     public class FrameBuilderBlock
     {
-        private readonly TransformManyBlock<byte[], byte[]> _frameBuilderBlock;
+        private readonly TransformManyBlock<PacketContext, PacketContext> _frameBuilderBlock;
         private readonly ILogger<FrameBuilderBlock> _logger;
         private const byte SYNC_BYTE = 2;
 
         public FrameBuilderBlock(ILogger<FrameBuilderBlock> logger)
         {
             _logger = logger;
-            _frameBuilderBlock = new TransformManyBlock<byte[], byte[]>(
+            _frameBuilderBlock = new TransformManyBlock<PacketContext, PacketContext>(
                 FilterAndBuildFrames,
                 new ExecutionDataflowBlockOptions
                 {
@@ -22,23 +23,23 @@ namespace TelemetryDeviceAPI.Pipeline
                 });
         }
 
-        public ITargetBlock<byte[]> Input => _frameBuilderBlock;
-        public ISourceBlock<byte[]> Output => _frameBuilderBlock;
+        public ITargetBlock<PacketContext> Input => _frameBuilderBlock;
+        public ISourceBlock<PacketContext> Output => _frameBuilderBlock;
 
-        private IEnumerable<byte[]> FilterAndBuildFrames(byte[] rawPacket)
+        private IEnumerable<PacketContext> FilterAndBuildFrames(PacketContext context)
         {
-            if (rawPacket == null || rawPacket.Length == 0)
+            if (context == null || context.RawData == null || context.RawData.Length == 0)
             {
                 yield break;
             }
 
-            if (rawPacket[0] != SYNC_BYTE)
+            if (context.RawData[0] != SYNC_BYTE)
             {
-                _logger.LogWarning("Discarded packet with invalid Sync byte: {SyncByte}", rawPacket[0]);
+                _logger.LogWarning("Discarded packet with invalid Sync byte from port {Port}", context.DestinationPort);
                 yield break;
             }
 
-            yield return rawPacket;
+            yield return context;
         }
     }
 }
