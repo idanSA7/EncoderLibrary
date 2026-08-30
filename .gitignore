@@ -1,6 +1,5 @@
 .vs/
 bin/
 obj/
-EncoderTests/"*.csproj.user" 
-"EncoderTests/" 
-"EncoderTests/" 
+*.csproj.user
+EncoderTests/
