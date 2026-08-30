@@ -5,13 +5,13 @@ using System.Threading.Tasks.Dataflow;
 
 namespace TelemetryDeviceAPI.Pipeline
 {
-    public class FrameBuilderTransformManyBlock
+    public class FrameBuilderBlock
     {
         private readonly TransformManyBlock<byte[], byte[]> _frameBuilderBlock;
-        private readonly ILogger<FrameBuilderTransformManyBlock> _logger;
+        private readonly ILogger<FrameBuilderBlock> _logger;
         private const byte SYNC_BYTE = 2;
 
-        public FrameBuilderTransformManyBlock(ILogger<FrameBuilderTransformManyBlock> logger)
+        public FrameBuilderBlock(ILogger<FrameBuilderBlock> logger)
         {
             _logger = logger;
             _frameBuilderBlock = new TransformManyBlock<byte[], byte[]>(

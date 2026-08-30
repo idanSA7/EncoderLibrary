@@ -2,11 +2,11 @@
 
 namespace TelemetryDeviceAPI.Pipeline
 {
-    public class RawPacketBufferBlock
+    public class RawPacketBuffer
     {
         private readonly BufferBlock<byte[]> _bufferBlock;
 
-        public RawPacketBufferBlock()
+        public RawPacketBuffer()
         {
             _bufferBlock = new BufferBlock<byte[]>();
         }

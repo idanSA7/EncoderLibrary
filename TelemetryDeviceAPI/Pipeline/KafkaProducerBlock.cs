@@ -12,17 +12,17 @@ using TelemetryDeviceAPI.Services;
 
 namespace TelemetryDeviceAPI.Pipeline
 {
-    public class KafkaProducerActionBlock
+    public class KafkaProducerBlock
     {
         private readonly ActionBlock<Dictionary<string, object>?> _block;
         private readonly IKafkaProducerService _kafkaProducer;
-        private readonly ILogger<KafkaProducerActionBlock> _logger;
+        private readonly ILogger<KafkaProducerBlock> _logger;
         private readonly string _topic;
 
-        public KafkaProducerActionBlock(
+        public KafkaProducerBlock(
             IKafkaProducerService kafkaProducer,
             IOptions<KafkaSettings> options,
-            ILogger<KafkaProducerActionBlock> logger)
+            ILogger<KafkaProducerBlock> logger)
         {
             _kafkaProducer = kafkaProducer;
             _logger = logger;

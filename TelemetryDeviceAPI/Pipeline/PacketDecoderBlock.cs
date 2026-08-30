@@ -7,17 +7,17 @@ using System.Threading.Tasks.Dataflow;
 
 namespace TelemetryDeviceAPI.Pipeline
 {
-    public class PacketDecoderTransformBlock
+    public class PacketDecoderBlock
     {
         private readonly TransformBlock<byte[], Dictionary<string, object>?> _decodeTransformBlock;
-        private readonly ILogger<PacketDecoderTransformBlock> _logger;
+        private readonly ILogger<PacketDecoderBlock> _logger;
         private readonly DecoderFlow _decoderFlow;
         private readonly IcdModel _icdModel;
 
-        public PacketDecoderTransformBlock(
+        public PacketDecoderBlock(
             DecoderFlow decoderFlow,
             IcdModel icdModel,
-            ILogger<PacketDecoderTransformBlock> logger)
+            ILogger<PacketDecoderBlock> logger)
         {
             _decoderFlow = decoderFlow;
             _icdModel = icdModel;
