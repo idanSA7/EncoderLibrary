@@ -1,10 +1,10 @@
 using EncoderLIbrary;
-using IcdModelsLIbrary;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
+using System.Security.AccessControl;
 using System.Threading;
 using System.Threading.Tasks;
 using TelemetrySimulator.Configuration;
@@ -16,12 +16,11 @@ namespace TelemetrySimulator.Services
     public class TelemetrySimulationService : ITelemetrySimulationService
     {
         private const string ICD_DIRECTORY_NAME = "IcdDefinitions";
-        private const string ICD_FILE_NAME = "FlightBoxDownIcd.json";
 
         private readonly EncoderFlow _telemetryEncoderFlow = new EncoderFlow();
         private readonly NetworkSettings _networkSettings;
         private readonly ITelemetryDataGenerator _dataGenerator;
-        private readonly IcdModel _icdDefinition;
+        private readonly Dictionary<IcdType, IcdModel> _icdDefinitions;
 
         private CancellationTokenSource? _simulationCancellationTokenSource;
 
@@ -33,7 +32,7 @@ namespace TelemetrySimulator.Services
         {
             _networkSettings = networkOptions.Value;
             _dataGenerator = dataGenerator;
-            _icdDefinition = LoadIcdDefinition();
+            _icdDefinitions = LoadIcdDefinitions();
         }
 
         public void StopBroadcasting()
@@ -60,21 +59,16 @@ namespace TelemetrySimulator.Services
         {
             using UdpClient udpSocketClient = new UdpClient();
             string targetIp = _networkSettings.TargetIp;
-
+            int basePort = (configuration.DestinationNetworkPort.HasValue && configuration.DestinationNetworkPort.Value > 0)
+                ? configuration.DestinationNetworkPort.Value
+                : _networkSettings.BasePort;
             try
             {
-                Console.WriteLine($"[DEBUG] Starting UDP broadcast to IP: {targetIp}, Port: {configuration.DestinationNetworkPort}");
+                Console.WriteLine($"[DEBUG] Starting UDP broadcast to IP: {targetIp}, Base Port: {basePort}");
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    Dictionary<string, string> currentTelemetryInputs = _dataGenerator.PrepareTelemetryData(_icdDefinition, configuration);
-
-                    byte[] encodedPacketBuffer = _telemetryEncoderFlow.Encode(_icdDefinition, currentTelemetryInputs);
-
-                    await SendPacketAsync(udpSocketClient, encodedPacketBuffer, targetIp, configuration.DestinationNetworkPort);
-
-                    Console.WriteLine($"[TEST] Copy this to Console App:\nbyte[] testPacket = new byte[] {{ {string.Join(", ", encodedPacketBuffer)} }};");
-
+                    await BroadcastAllIcdsAsync(udpSocketClient, targetIp, basePort, configuration);
                     await Task.Delay(configuration.TransmissionIntervalMilliseconds, cancellationToken);
                 }
             }
@@ -94,9 +88,41 @@ namespace TelemetrySimulator.Services
             }
         }
 
-        private IcdModel LoadIcdDefinition()
+        private async Task BroadcastAllIcdsAsync(
+            UdpClient udpSocketClient,
+            string targetIp,
+            int basePort,
+            TelemetrySimulationRequestDto configuration)
         {
-            string icdFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ICD_DIRECTORY_NAME, ICD_FILE_NAME);
+            foreach (KeyValuePair<IcdType, IcdModel> kvp in _icdDefinitions)
+            {
+                IcdType currentType = kvp.Key;
+                IcdModel currentIcd = kvp.Value;
+
+                int targetPort = basePort + (int)currentType;
+
+                Dictionary<string, string> currentTelemetryInputs = _dataGenerator.PrepareTelemetryData(currentIcd, configuration);
+                byte[] encodedPacketBuffer = _telemetryEncoderFlow.Encode(currentIcd, currentTelemetryInputs);
+
+                await SendPacketAsync(udpSocketClient, encodedPacketBuffer, targetIp, targetPort);
+
+                Console.WriteLine($"[TEST] Sent {currentType} to Port {targetPort}");
+            }
+        }
+
+        private Dictionary<IcdType, IcdModel> LoadIcdDefinitions()
+        {
+            Dictionary<IcdType, IcdModel> definitions = new Dictionary<IcdType, IcdModel>();
+
+            definitions[IcdType.FlightBoxUp] = LoadSingleIcd("FlightBoxUpIcd.json");
+            definitions[IcdType.FlightBoxDown] = LoadSingleIcd("FlightBoxDownIcd.json");
+
+            return definitions;
+        }
+
+        private IcdModel LoadSingleIcd(string fileName)
+        {
+            string icdFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ICD_DIRECTORY_NAME, fileName);
 
             if (!File.Exists(icdFilePath))
             {
@@ -106,7 +132,7 @@ namespace TelemetrySimulator.Services
             string icdJsonContent = File.ReadAllText(icdFilePath);
 
             return IcdModel.LoadFromJson(icdJsonContent)
-                   ?? throw new InvalidOperationException("Failed to parse ICD JSON configuration.");
+                   ?? throw new InvalidOperationException($"Failed to parse ICD JSON configuration for {fileName}.");
         }
 
         private async Task SendPacketAsync(UdpClient udpSocketClient, byte[] encodedPacketBuffer, string targetIp, int targetPort)
