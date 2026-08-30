@@ -1,11 +1,12 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using KafkaInfrastructure.Configuration;
+using KafkaInfrastructure.Interfaces;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using TelemetryDeviceAPI.Configuration;
 using TelemetryDeviceAPI.Interfaces;
 using TelemetryDeviceAPI.Services;
 

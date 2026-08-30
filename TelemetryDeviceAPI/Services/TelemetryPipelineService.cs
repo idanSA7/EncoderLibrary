@@ -8,11 +8,10 @@ using TelemetryDeviceAPI.Pipeline;
 
 namespace TelemetryDeviceAPI.Services
 {
-    public class TelemetryPipelineService : IPacketQueueService, IDisposable
+    public class TelemetryPipelineService : IPacketQueueService
     {
         private readonly RawPacketBufferBlock _bufferBlock;
         private readonly ILogger<TelemetryPipelineService> _logger;
-        private readonly UdpClient? _dummyListener;
 
         private const int DEFAULT_PORT_CONFIG = 5000;
         private const string TARGET_PORT_CONFIG_KEY = "packetsDestination:targetPort";
@@ -29,15 +28,6 @@ namespace TelemetryDeviceAPI.Services
             _logger = logger;
 
             int targetPort = configuration.GetValue<int>(TARGET_PORT_CONFIG_KEY, DEFAULT_PORT_CONFIG);
-            try
-            {
-                _dummyListener = new UdpClient(targetPort);
-                _logger.LogInformation("Dummy UDP listener bound to port {Port} successfully.", targetPort);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Could not bind dummy UDP listener to port {Port}.", targetPort);
-            }
 
             LinkPipeline(frameBuilderBlock, decodeTransformBlock, kafkaActionBlock);
         }
@@ -62,10 +52,6 @@ namespace TelemetryDeviceAPI.Services
             return _bufferBlock.Enqueue(packet);
         }
 
-        public void Dispose()
-        {
-            _dummyListener?.Close();
-            _dummyListener?.Dispose();
-        }
+        
     }
 }
