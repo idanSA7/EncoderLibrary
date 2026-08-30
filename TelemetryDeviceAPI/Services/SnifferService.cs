@@ -105,15 +105,15 @@ namespace TelemetryDeviceAPI.Services
             RawCapture rawCapture = e.GetPacket();
             if (rawCapture == null || rawCapture.Data == null || rawCapture.Data.Length == 0) return;
 
-            var parsedPacket = Packet.ParsePacket(rawCapture.LinkLayerType, rawCapture.Data);
-            var udpPacket = parsedPacket.Extract<UdpPacket>();
+            Packet parsedPacket = Packet.ParsePacket(rawCapture.LinkLayerType, rawCapture.Data);
+            UdpPacket? udpPacket = parsedPacket.Extract<UdpPacket>();
 
             if (udpPacket != null)
             {
                 int destPort = udpPacket.DestinationPort;
                 IcdType type = (IcdType)(destPort - _basePort);
 
-                var context = new PacketContext
+                PacketContext context = new PacketContext
                 {
                     RawData = udpPacket.PayloadData,
                     DestinationPort = destPort,
