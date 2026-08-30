@@ -22,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelemetryDeviceAPI", "..\Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KafkaIntegrationLibrary", "..\KafkaInfrastructureLibrary\KafkaIntegrationLibrary.csproj", "{0AFF5865-3591-4649-B225-EE630EB7FC3F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelemetryMongoConsumer", "..\TelemetryMongoConsumer\TelemetryMongoConsumer.csproj", "{2F75CE7D-FFD5-4C8D-BD35-923BD842F7F2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -56,6 +58,10 @@ Global
 		{0AFF5865-3591-4649-B225-EE630EB7FC3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0AFF5865-3591-4649-B225-EE630EB7FC3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0AFF5865-3591-4649-B225-EE630EB7FC3F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F75CE7D-FFD5-4C8D-BD35-923BD842F7F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F75CE7D-FFD5-4C8D-BD35-923BD842F7F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F75CE7D-FFD5-4C8D-BD35-923BD842F7F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F75CE7D-FFD5-4C8D-BD35-923BD842F7F2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
