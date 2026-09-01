@@ -15,4 +15,8 @@
     <Folder Include="Controllers\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\KafkaInfrastructureLibrary\KafkaInfrastructureLibrary.csproj" />
+  </ItemGroup>
+
 </Project>
