@@ -94,28 +94,47 @@ namespace TelemetrySimulator.Services
             int basePort,
             TelemetrySimulationRequestDto configuration)
         {
-            if (configuration.icdTypee == null)
+            if (configuration.IcdType.HasValue)
             {
+                IcdType targetType = configuration.IcdType.Value;
 
-                foreach (KeyValuePair<IcdType, IcdModel> kvp in _icdDefinitions)
+                if (_icdDefinitions.TryGetValue(targetType, out IcdModel? selectedIcd))
                 {
-                    IcdType currentType = kvp.Key;
-                    IcdModel currentIcd = kvp.Value;
-
-                    int targetPort = basePort + (int)currentType;
-
-                    Dictionary<string, string> currentTelemetryInputs = _dataGenerator.PrepareTelemetryData(currentIcd, configuration);
-                    byte[] encodedPacketBuffer = _telemetryEncoderFlow.Encode(currentIcd, currentTelemetryInputs);
-
-                    await SendPacketAsync(udpSocketClient, encodedPacketBuffer, targetIp, targetPort);
-
-                    Console.WriteLine($"[TEST] Sent {currentType} to Port {targetPort}");
+                    await TransmitSingleIcdAsync(udpSocketClient, targetIp, basePort, targetType, selectedIcd, configuration);
+                }
+                else
+                {
+                    Console.WriteLine($"[WARNING] Requested ICD type '{targetType}' is not registered in definitions.");
                 }
             }
             else
             {
+                foreach (KeyValuePair<IcdType, IcdModel> icdEntry in _icdDefinitions)
+                {
+                    IcdType currentType = icdEntry.Key;
+                    IcdModel currentIcd = icdEntry.Value;
 
+                    await TransmitSingleIcdAsync(udpSocketClient, targetIp, basePort, currentType, currentIcd, configuration);
+                }
             }
+        }
+
+        private async Task TransmitSingleIcdAsync(
+            UdpClient udpSocketClient,
+            string targetIp,
+            int basePort,
+            IcdType icdType,
+            IcdModel icdModel,
+            TelemetrySimulationRequestDto configuration)
+        {
+            int targetPort = basePort + (int)icdType;
+
+            Dictionary<string, string> currentTelemetryInputs = _dataGenerator.PrepareTelemetryData(icdModel, configuration);
+            byte[] encodedPacketBuffer = _telemetryEncoderFlow.Encode(icdModel, currentTelemetryInputs);
+
+            await SendPacketAsync(udpSocketClient, encodedPacketBuffer, targetIp, targetPort);
+
+            Console.WriteLine($"[TEST] Sent {icdType} to Port {targetPort}");
         }
 
         private Dictionary<IcdType, IcdModel> LoadIcdDefinitions()
