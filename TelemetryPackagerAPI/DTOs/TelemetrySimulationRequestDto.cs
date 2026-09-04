@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-
+using IcdModelsLIbrary;
 namespace TelemetrySimulator.DTOs
 {
     public class TelemetrySimulationRequestDto
@@ -19,6 +19,7 @@ namespace TelemetrySimulator.DTOs
         [Range(MIN_INTERVAL_MS, MAX_INTERVAL_MS, ErrorMessage = "Interval must be between 10ms and 60000ms.")]
         public int TransmissionIntervalMilliseconds { get; set; } = DEFAULT_INTERVAL_MS;
 
+        public IcdType icdTypee { get; set; }
         public Dictionary<string, string>? TelemetryInputs { get; set; } = new Dictionary<string, string>();
     }
 }

@@ -94,19 +94,27 @@ namespace TelemetrySimulator.Services
             int basePort,
             TelemetrySimulationRequestDto configuration)
         {
-            foreach (KeyValuePair<IcdType, IcdModel> kvp in _icdDefinitions)
+            if (configuration.icdTypee == null)
             {
-                IcdType currentType = kvp.Key;
-                IcdModel currentIcd = kvp.Value;
 
-                int targetPort = basePort + (int)currentType;
+                foreach (KeyValuePair<IcdType, IcdModel> kvp in _icdDefinitions)
+                {
+                    IcdType currentType = kvp.Key;
+                    IcdModel currentIcd = kvp.Value;
 
-                Dictionary<string, string> currentTelemetryInputs = _dataGenerator.PrepareTelemetryData(currentIcd, configuration);
-                byte[] encodedPacketBuffer = _telemetryEncoderFlow.Encode(currentIcd, currentTelemetryInputs);
+                    int targetPort = basePort + (int)currentType;
 
-                await SendPacketAsync(udpSocketClient, encodedPacketBuffer, targetIp, targetPort);
+                    Dictionary<string, string> currentTelemetryInputs = _dataGenerator.PrepareTelemetryData(currentIcd, configuration);
+                    byte[] encodedPacketBuffer = _telemetryEncoderFlow.Encode(currentIcd, currentTelemetryInputs);
 
-                Console.WriteLine($"[TEST] Sent {currentType} to Port {targetPort}");
+                    await SendPacketAsync(udpSocketClient, encodedPacketBuffer, targetIp, targetPort);
+
+                    Console.WriteLine($"[TEST] Sent {currentType} to Port {targetPort}");
+                }
+            }
+            else
+            {
+
             }
         }
 
