@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TelemetryDeviceAPI.Interfaces;
 using TelemetryDeviceAPI.Models;
+using IcdModelsLIbrary;
 
 namespace TelemetryDeviceAPI.Services
 {

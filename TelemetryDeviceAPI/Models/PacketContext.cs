@@ -1,4 +1,5 @@
-﻿namespace TelemetryDeviceAPI.Models
+﻿using IcdModelsLIbrary;
+namespace TelemetryDeviceAPI.Models
 {
     public class PacketContext
     {
