@@ -1,6 +1,6 @@
 ﻿using DecoderLibrary;
 using IcdModelsLIbrary;
-using KafkaInfrastructure.Interfaces;
+using KafkaIntegrationLibrary.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Threading.Tasks.Dataflow;

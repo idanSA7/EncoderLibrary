@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace KafkaInfrastructure.Interfaces
+namespace KafkaIntegrationLibrary.Interfaces
 {
     public interface IKafkaProducerService
     {

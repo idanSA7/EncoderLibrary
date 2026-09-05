@@ -3,10 +3,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Threading.Tasks;
-using KafkaInfrastructure.Configuration;
-using KafkaInfrastructure.Interfaces;
+using KafkaIntegrationLibrary.Configuration;
+using KafkaIntegrationLibrary.Interfaces;
 
-namespace KafkaInfrastructure.Services
+namespace KafkaIntegrationLibrary.Services
 {
     public class KafkaProducerService : IKafkaProducerService, IDisposable
     {

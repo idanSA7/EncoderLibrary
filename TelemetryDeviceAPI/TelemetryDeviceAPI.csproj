@@ -7,13 +7,19 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="Configuration\**" />
+	  <Content Remove="Configuration\**" />
+	  <EmbeddedResource Remove="Configuration\**" />
+	  <None Remove="Configuration\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Confluent.Kafka" Version="2.15.0" />
 		<PackageReference Include="SharpPcap" Version="6.3.1" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Configuration\" />
 		<Folder Include="DTOs\" />
 	</ItemGroup>
 
@@ -26,7 +32,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\DecoderLibrary\DecoderLibrary.csproj" />
 		<ProjectReference Include="..\IcdModelsLibrary\IcdModelsLibrary.csproj" />
-		<ProjectReference Include="..\KafkaInfrastructureLibrary\KafkaInfrastructureLibrary.csproj" />
+		<ProjectReference Include="..\KafkaInfrastructureLibrary\KafkaIntegrationLibrary.csproj" />
 	</ItemGroup>
 
 </Project>

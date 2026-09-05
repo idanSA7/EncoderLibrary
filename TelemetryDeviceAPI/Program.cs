@@ -1,9 +1,9 @@
 using System.IO;
 using DecoderLibrary;
 using IcdModelsLIbrary;
-using KafkaInfrastructure.Configuration;
-using KafkaInfrastructure.Interfaces;
-using KafkaInfrastructure.Services;
+using KafkaIntegrationLibrary.Configuration;
+using KafkaIntegrationLibrary.Interfaces;
+using KafkaIntegrationLibrary.Services;
 using TelemetryDeviceAPI.Interfaces;
 using TelemetryDeviceAPI.Services;
 

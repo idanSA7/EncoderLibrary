@@ -1,4 +1,4 @@
-﻿using KafkaInfrastructure.Interfaces;
+﻿using KafkaIntegrationLibrary.Interfaces;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Text.Json;
