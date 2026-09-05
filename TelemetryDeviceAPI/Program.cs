@@ -1,3 +1,4 @@
+using System.IO;
 using DecoderLibrary;
 using IcdModelsLIbrary;
 using KafkaInfrastructure.Configuration;
@@ -12,14 +13,22 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+string icdDirectory = Path.Combine(AppContext.BaseDirectory, "IcdDefinitions");
+var icdDefinitions = new Dictionary<IcdType, IcdModel>
+{
+    [IcdType.FlightBoxUp] = IcdModel.LoadFromJson(File.ReadAllText(Path.Combine(icdDirectory, "FlightBoxUpIcd.json"))),
+    [IcdType.FlightBoxDown] = IcdModel.LoadFromJson(File.ReadAllText(Path.Combine(icdDirectory, "FlightBoxDownIcd.json")))
+};
+
+builder.Services.AddSingleton(icdDefinitions);
+
 builder.Services.AddSingleton<IKafkaProducerService, KafkaProducerService>();
 builder.Services.AddSingleton<DecoderFlow>();
-builder.Services.AddSingleton<IcdModel>();
 builder.Services.AddSingleton<ISnifferService, SnifferService>();
 builder.Services.AddSingleton<IPacketQueueService, TelemetryPipelineService>();
 
-builder.Services.Configure<KafkaSettings>
-    (builder.Configuration.GetSection(nameof(KafkaSettings)));
+builder.Services.Configure<KafkaSettings>(
+    builder.Configuration.GetSection(nameof(KafkaSettings)));
 
 var app = builder.Build();
 

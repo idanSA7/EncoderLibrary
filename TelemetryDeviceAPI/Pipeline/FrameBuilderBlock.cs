@@ -10,7 +10,7 @@ namespace TelemetryDeviceAPI.Pipeline
     {
         private readonly TransformManyBlock<PacketContext, PacketContext> _frameBuilderBlock;
         private readonly ILogger<FrameBuilderBlock> _logger;
-        private const byte SYNC_BYTE = 2;
+        private const byte SYNC_BYTE = 172;
 
         public FrameBuilderBlock(ILogger<FrameBuilderBlock> logger)
         {
