@@ -19,7 +19,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DecoderLibrary", "..\Decode
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelemetryDeviceAPI", "..\TelemetryDeviceAPI\TelemetryDeviceAPI.csproj", "{23DDFD8F-1480-4987-9B25-690291A35A51}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KafkaInfrastructureLibrary", "..\KafkaInfrastructureLibrary\KafkaInfrastructureLibrary.csproj", "{0AFF5865-3591-4649-B225-EE630EB7FC3F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KafkaIntegrationLibrary", "..\KafkaInfrastructureLibrary\KafkaIntegrationLibrary.csproj", "{0AFF5865-3591-4649-B225-EE630EB7FC3F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
