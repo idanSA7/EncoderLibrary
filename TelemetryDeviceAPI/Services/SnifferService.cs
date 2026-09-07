@@ -1,13 +1,14 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using SharpPcap;
-using PacketDotNet;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using IcdModelsLIbrary;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using PacketDotNet;
+using SharpPcap;
+using TelemetryDeviceAPI.Configuration;
 using TelemetryDeviceAPI.Interfaces;
 using TelemetryDeviceAPI.Models;
-using IcdModelsLIbrary;
 
 namespace TelemetryDeviceAPI.Services
 {
@@ -20,10 +21,6 @@ namespace TelemetryDeviceAPI.Services
         private readonly string _sourceIp;
         private ILiveDevice? _device;
 
-        private const string BASE_PORT_CONFIG_KEY = "TelemetrySettings:BasePort";
-        private const string TARGET_IP_CONFIG_KEY = "packetsDestination:targetIp";
-        private const string SOURCE_IP_CONFIG_KEY = "packetsDestination:sourceIp";
-
         private const int READ_TIMEOUT_MS = 1000;
 
         public bool IsRunning { get; private set; }
@@ -31,14 +28,15 @@ namespace TelemetryDeviceAPI.Services
         public SnifferService(
             IPacketQueueService queueService,
             ILogger<SnifferService> logger,
-            IConfiguration configuration)
+            IOptions<TelemetrySettings> telemetryOptions,
+            IOptions<PacketsDestinationSettings> destinationOptions)
         {
             _queueService = queueService;
             _logger = logger;
 
-            _basePort = configuration.GetValue<int>(BASE_PORT_CONFIG_KEY, 11505);
-            _targetIp = configuration[TARGET_IP_CONFIG_KEY] ?? string.Empty;
-            _sourceIp = configuration[SOURCE_IP_CONFIG_KEY] ?? string.Empty;
+            _basePort = telemetryOptions.Value.BasePort;
+            _targetIp = destinationOptions.Value.TargetIp;
+            _sourceIp = destinationOptions.Value.SourceIp;
         }
 
         public bool StartSniffing(string? deviceName = null)
