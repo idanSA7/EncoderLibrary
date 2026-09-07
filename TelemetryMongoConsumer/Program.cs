@@ -1,15 +1,39 @@
-var builder = WebApplication.CreateBuilder(args);
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using MongoDB.Driver;
+using TelemetryMongoConsumer.Configuration;
+using TelemetryMongoConsumer.Interfaces;
+using TelemetryMongoConsumer.Services;
 
-// Add services to the container.
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var app = builder.Build();
+builder.Services.Configure<KafkaSettings>(
+    builder.Configuration.GetSection(nameof(KafkaSettings)));
 
-// Configure the HTTP request pipeline.
+builder.Services.Configure<MongoSettings>(
+    builder.Configuration.GetSection(nameof(MongoSettings)));
+
+builder.Services.AddSingleton<IMongoClient>(sp =>
+{
+    MongoSettings? mongoSettings = builder.Configuration
+        .GetSection(nameof(MongoSettings))
+        .Get<MongoSettings>();
+
+    return new MongoClient(mongoSettings?.ConnectionString);
+});
+
+builder.Services.AddSingleton<ITelemetryMongoRepository, TelemetryMongoRepository>();
+
+builder.Services.AddSingleton<IKafkaConsumerManager, KafkaMongoConsumerWorker>();
+
+WebApplication app = builder.Build();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -17,9 +41,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
