@@ -1,11 +1,9 @@
 using DecoderLibrary;
-using IcdModelsLIbrary;
 using KafkaIntegrationLibrary.Configuration;
 using KafkaIntegrationLibrary.Interfaces;
 using KafkaIntegrationLibrary.Services;
-using System.IO;
+using TelemetryDeviceAPI.Configuration;
 using TelemetryDeviceAPI.Interfaces;
-using TelemetryDeviceAPI.Models;
 using TelemetryDeviceAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,14 +21,8 @@ builder.Services.Configure<PacketsDestinationSettings>(
 builder.Services.Configure<KafkaSettings>(
     builder.Configuration.GetSection(nameof(KafkaSettings)));
 
-string icdDirectory = Path.Combine(AppContext.BaseDirectory, "IcdDefinitions");
-var icdDefinitions = new Dictionary<IcdType, IcdModel>
-{
-    [IcdType.FlightBoxUp] = IcdModel.LoadFromJson(File.ReadAllText(Path.Combine(icdDirectory, "FlightBoxUpIcd.json"))),
-    [IcdType.FlightBoxDown] = IcdModel.LoadFromJson(File.ReadAllText(Path.Combine(icdDirectory, "FlightBoxDownIcd.json")))
-};
-
-builder.Services.AddSingleton(icdDefinitions);
+builder.Services.Configure<IcdSettings>(
+    builder.Configuration.GetSection(nameof(IcdSettings)));
 
 builder.Services.AddSingleton<IKafkaProducerService, KafkaProducerService>();
 builder.Services.AddSingleton<DecoderFlow>();

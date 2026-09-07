@@ -1,4 +1,4 @@
-﻿namespace TelemetryDeviceAPI.Models
+﻿namespace TelemetryDeviceAPI.Configuration
 {
     public class TelemetrySettings
     {
