@@ -1,0 +1,19 @@
+[
+{"Id":"1","Location":"0","Name":"Sync","Mask":"","StartBit":"","Bit":"8","Min":"172","Max":"172"},
+{"Id":"2","Location":"1","Name":"Length","Mask":"","StartBit":"","Bit":"8","Min":"6","Max":"6"},
+{"Id":"3","Location":"2","Name":"Counter","Mask":"","StartBit":"","Bit":"8","Min":"0","Max":"255"},
+{"Id":"4","Location":"3","Name":"Light - Copilot","Mask":"00000001","StartBit":"1","Bit":"1","Min":"0","Max":"1"},
+{"Id":"5","Location":"3","Name":"Light - Student","Mask":"00000010","StartBit":"2","Bit":"1","Min":"0","Max":"1"},
+{"Id":"6","Location":"3","Name":"Light - Ready","Mask":"00000100","StartBit":"3","Bit":"1","Min":"0","Max":"1"},
+{"Id":"7","Location":"3","Name":"Light - diseg","Mask":"00001000","StartBit":"4","Bit":"1","Min":"0","Max":"1"},
+{"Id":"8","Location":"3","Name":"Light - sum","Mask":"00010000","StartBit":"5","Bit":"1","Min":"0","Max":"1"},
+{"Id":"9","Location":"3","Name":"UPL_Not Used 1","Mask":"11100000","StartBit":"6-8","Bit":"3","Min":"0","Max":"1"},
+{"Id":"10","Location":"4","Name":"Cal Correlator","Mask":"","StartBit":"","Bit":"8","Min":"0","Max":"255"},
+{"Id":"11","Location":"5","Name":"Cal Stike","Mask":"","StartBit":"","Bit":"8","Min":"0","Max":"7"},
+{"Id":"12","Location":"6","Name":"Fbx Mode","Mask":"00001111","StartBit":"1-4","Bit":"4","Min":"0","Max":"4"},
+{"Id":"13","Location":"6","Name":"UPL","Mask":"00110000","StartBit":"5-6","Bit":"2","Min":"0","Max":"0"},
+{"Id":"14","Location":"6","Name":"Comm Fail","Mask":"01000000","StartBit":"7","Bit":"1","Min":"0","Max":"1"},
+{"Id":"15","Location":"6","Name":"Lamp Test","Mask":"10000000","StartBit":"8","Bit":"1","Min":"0","Max":"1"},
+{"Id":"16","Location":"7","Name":"Cal Data","Mask":"","StartBit":"","Bit":"8","Min":"0","Max":"255"},
+{"Id":"17","Location":"8","Name":"ChckSum","Mask":"","StartBit":"","Bit":"8","Min":"0","Max":"255"}
+]
