@@ -4,3 +4,4 @@ obj/
 *.csproj.user
 EncoderTests/
 *.csproj.user
+*.user
