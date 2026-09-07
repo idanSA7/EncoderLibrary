@@ -1,5 +1,4 @@
 ﻿using Confluent.Kafka;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
@@ -12,12 +11,18 @@ using TelemetryMongoConsumer.Models;
 
 namespace TelemetryMongoConsumer.Services
 {
-    public class KafkaMongoConsumerWorker : BackgroundService
+    public class KafkaMongoConsumerWorker : IKafkaConsumerManager, IDisposable
     {
         private readonly ILogger<KafkaMongoConsumerWorker> _logger;
         private readonly ITelemetryMongoRepository _repository;
         private readonly KafkaSettings _kafkaSettings;
         private readonly JsonSerializerOptions _jsonOptions;
+
+        private CancellationTokenSource? _cts;
+        private Task? _executingTask;
+        private readonly object _lock = new();
+
+        public bool IsRunning => _executingTask != null && !_executingTask.IsCompleted;
 
         public KafkaMongoConsumerWorker(
             ILogger<KafkaMongoConsumerWorker> logger,
@@ -30,17 +35,76 @@ namespace TelemetryMongoConsumer.Services
             _jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        public bool Start()
         {
-            await Task.Yield();
+            lock (_lock)
+            {
+                if (IsRunning) return false;
 
+                _cts = new CancellationTokenSource();
+                _executingTask = Task.Run(() => RunConsumerLoopAsync(_cts.Token));
+                _logger.LogInformation("Kafka Mongo Consumer started manually.");
+                return true;
+            }
+        }
+
+        public bool Stop()
+        {
+            lock (_lock)
+            {
+                if (!IsRunning || _cts == null) return false;
+
+                _cts.Cancel();
+                try
+                {
+                    _executingTask?.Wait(TimeSpan.FromSeconds(5));
+                }
+                catch (AggregateException ex) when (ex.InnerException is OperationCanceledException) { }
+
+                _cts.Dispose();
+                _cts = null;
+                _executingTask = null;
+                _logger.LogInformation("Kafka Mongo Consumer stopped manually.");
+                return true;
+            }
+        }
+
+        private async Task RunConsumerLoopAsync(CancellationToken stoppingToken)
+        {
             using IConsumer<string, string> consumer = BuildConsumer();
             consumer.Subscribe(_kafkaSettings.Topic);
-            _logger.LogInformation("Kafka Mongo Consumer subscribed to topic: {Topic}", _kafkaSettings.Topic);
+            _logger.LogInformation("Subscribed to topic: {Topic}", _kafkaSettings.Topic);
 
             try
             {
-                await RunConsumerLoopAsync(consumer, stoppingToken);
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    try
+                    {
+                        ConsumeResult<string, string> consumeResult = consumer.Consume(stoppingToken);
+                        if (consumeResult?.Message?.Value != null)
+                        {
+                            DecodedPacketDocument? document = JsonSerializer.Deserialize<DecodedPacketDocument>(
+                                consumeResult.Message.Value, _jsonOptions);
+
+                            if (document != null)
+                            {
+                                await _repository.InsertDecodedPacketAsync(document);
+                                _logger.LogInformation("Stored packet in Mongo. Key: {Key}", consumeResult.Message.Key);
+                            }
+
+                            consumer.Commit(consumeResult);
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing Kafka message or persisting to MongoDB");
+                    }
+                }
             }
             finally
             {
@@ -49,50 +113,9 @@ namespace TelemetryMongoConsumer.Services
             }
         }
 
-        private async Task RunConsumerLoopAsync(IConsumer<string, string> consumer, CancellationToken stoppingToken)
-        {
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                try
-                {
-                    ConsumeResult<string, string> consumeResult = consumer.Consume(stoppingToken);
-
-                    if (consumeResult?.Message?.Value != null)
-                    {
-                        await ProcessAndPersistMessageAsync(consumeResult);
-                        consumer.Commit(consumeResult);
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error processing Kafka message or persisting to MongoDB");
-                }
-            }
-        }
-
-        private async Task ProcessAndPersistMessageAsync(ConsumeResult<string, string> consumeResult)
-        {
-            DecodedPacketDocument? document = JsonSerializer.Deserialize<DecodedPacketDocument>(
-                consumeResult.Message.Value,
-                _jsonOptions);
-
-            if (document == null)
-            {
-                _logger.LogWarning("Skipping null or corrupted message from Kafka key: {Key}", consumeResult.Message.Key);
-                return;
-            }
-
-            await _repository.InsertDecodedPacketAsync(document);
-            _logger.LogInformation("Stored decoded packet in Mongo. Key: {Key}", consumeResult.Message.Key);
-        }
-
         private IConsumer<string, string> BuildConsumer()
         {
-            ConsumerConfig consumerConfig = new ConsumerConfig
+            ConsumerConfig config = new ConsumerConfig
             {
                 BootstrapServers = _kafkaSettings.BootstrapServers,
                 GroupId = _kafkaSettings.GroupId,
@@ -100,7 +123,12 @@ namespace TelemetryMongoConsumer.Services
                 EnableAutoCommit = false
             };
 
-            return new ConsumerBuilder<string, string>(consumerConfig).Build();
+            return new ConsumerBuilder<string, string>(config).Build();
+        }
+
+        public void Dispose()
+        {
+            Stop();
         }
     }
 }
