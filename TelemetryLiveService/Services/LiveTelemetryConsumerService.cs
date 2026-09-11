@@ -14,7 +14,7 @@ public class LiveTelemetryConsumerService
     private readonly TelemetryFilterSettings _filterSettings;
     private readonly IHubContext<TelemetryHub> _hubContext;
 
-    private CancellationTokenSource? _cts;
+    private CancellationTokenSource? _LiveTelemtryCancellationToken;
     private Task? _consumingTask;
 
     public bool IsRunning => _consumingTask != null && !_consumingTask.IsCompleted;
@@ -39,8 +39,8 @@ public class LiveTelemetryConsumerService
             return;
         }
 
-        _cts = new CancellationTokenSource();
-        _consumingTask = Task.Run(async () => await ConsumeLoopAsync(_cts.Token));
+        _LiveTelemtryCancellationToken = new CancellationTokenSource();
+        _consumingTask = Task.Run(async () => await ConsumeLoopAsync(_LiveTelemtryCancellationToken.Token));
         _logger.LogInformation("Live Telemetry Consumer started.");
     }
 
@@ -52,10 +52,10 @@ public class LiveTelemetryConsumerService
             return;
         }
 
-        _cts?.Cancel();
+        _LiveTelemtryCancellationToken?.Cancel();
         _consumingTask?.Wait();
-        _cts?.Dispose();
-        _cts = null;
+        _LiveTelemtryCancellationToken?.Dispose();
+        _LiveTelemtryCancellationToken = null;
         _consumingTask = null;
         _logger.LogInformation("Live Telemetry Consumer stopped.");
     }
