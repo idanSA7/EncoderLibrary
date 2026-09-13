@@ -1,9 +1,10 @@
 ﻿using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using TelemetryMongoConsumer.Configuration;
@@ -17,11 +18,9 @@ namespace TelemetryMongoConsumer.Services
         private readonly ILogger<KafkaMongoConsumerWorker> _logger;
         private readonly ITelemetryMongoRepository _repository;
         private readonly KafkaSettings _kafkaSettings;
-        private readonly JsonSerializerOptions _jsonOptions;
 
         private CancellationTokenSource? _cts;
         private Task? _executingTask;
-        private readonly object _lock = new();
 
         public bool IsRunning => _executingTask != null && !_executingTask.IsCompleted;
 
@@ -33,41 +32,34 @@ namespace TelemetryMongoConsumer.Services
             _logger = logger;
             _repository = repository;
             _kafkaSettings = kafkaOptions.Value;
-            _jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         }
 
         public bool Start()
         {
-            lock (_lock)
-            {
-                if (IsRunning) return false;
+            if (IsRunning) return false;
 
-                _cts = new CancellationTokenSource();
-                _executingTask = Task.Run(() => RunConsumerLoopAsync(_cts.Token));
-                _logger.LogInformation("Kafka Mongo Consumer started manually.");
-                return true;
-            }
+            _cts = new CancellationTokenSource();
+            _executingTask = Task.Run(() => RunConsumerLoopAsync(_cts.Token));
+            _logger.LogInformation("Kafka Mongo Consumer started manually.");
+            return true;
         }
 
         public bool Stop()
         {
-            lock (_lock)
+            if (!IsRunning || _cts == null) return false;
+
+            _cts.Cancel();
+            try
             {
-                if (!IsRunning || _cts == null) return false;
-
-                _cts.Cancel();
-                try
-                {
-                    _executingTask?.Wait(TimeSpan.FromSeconds(5));
-                }
-                catch (AggregateException ex) when (ex.InnerException is OperationCanceledException) { }
-
-                _cts.Dispose();
-                _cts = null;
-                _executingTask = null;
-                _logger.LogInformation("Kafka Mongo Consumer stopped manually.");
-                return true;
+                _executingTask?.Wait(TimeSpan.FromSeconds(5));
             }
+            catch (AggregateException ex) when (ex.InnerException is OperationCanceledException) { }
+
+            _cts.Dispose();
+            _cts = null;
+            _executingTask = null;
+            _logger.LogInformation("Kafka Mongo Consumer stopped manually.");
+            return true;
         }
 
         private async Task RunConsumerLoopAsync(CancellationToken stoppingToken)
@@ -80,50 +72,7 @@ namespace TelemetryMongoConsumer.Services
             {
                 while (!stoppingToken.IsCancellationRequested)
                 {
-                    try
-                    {
-                        ConsumeResult<string, string> consumeResult = consumer.Consume(stoppingToken);
-                        if (consumeResult?.Message?.Value != null)
-                        {
-                            Dictionary<string, JsonElement>? parsedJson = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
-                                consumeResult.Message.Value, _jsonOptions);
-
-                            if (parsedJson != null)
-                            {
-                                Dictionary<string, object> parameters = new Dictionary<string, object>();
-                                foreach (KeyValuePair<string, JsonElement> item in parsedJson)
-                                {
-                                    parameters[item.Key] = ExtractPrimitiveValue(item.Value);
-                                }
-
-                                string icdType = string.Empty;
-                                if (consumeResult.Topic.StartsWith("telemetry-"))
-                                {
-                                    icdType = consumeResult.Topic.Substring("telemetry-".Length);
-                                }
-
-                                DecodedPacketDocument document = new DecodedPacketDocument
-                                {
-                                    IcdType = icdType,
-                                    DecodedAt = DateTime.UtcNow,
-                                    Parameters = parameters
-                                };
-
-                                await _repository.InsertDecodedPacketAsync(document);
-                                _logger.LogInformation("Stored packet in Mongo. Key: {Key}", consumeResult.Message.Key);
-                            }
-
-                            consumer.Commit(consumeResult);
-                        }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error processing Kafka message or persisting to MongoDB");
-                    }
+                    await ConsumeAndProcessSingleMessageAsync(consumer, stoppingToken);
                 }
             }
             finally
@@ -133,27 +82,62 @@ namespace TelemetryMongoConsumer.Services
             }
         }
 
-        private object ExtractPrimitiveValue(JsonElement element)
+        private async Task ConsumeAndProcessSingleMessageAsync(IConsumer<string, string> consumer, CancellationToken stoppingToken)
         {
-            switch (element.ValueKind)
+            try
             {
-                case JsonValueKind.String:
-                    return element.GetString() ?? string.Empty;
-                case JsonValueKind.Number:
-                    if (element.TryGetInt64(out long int64Val))
-                    {
-                        return int64Val;
-                    }
-                    return element.GetDouble();
-                case JsonValueKind.True:
-                    return true;
-                case JsonValueKind.False:
-                    return false;
-                case JsonValueKind.Null:
-                    return string.Empty;
-                default:
-                    return element.ToString();
+                ConsumeResult<string, string> consumeResult = consumer.Consume(stoppingToken);
+                if (consumeResult?.Message?.Value == null)
+                {
+                    return;
+                }
+
+                await ProcessAndPersistMessageAsync(consumeResult);
+                consumer.Commit(consumeResult);
             }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing Kafka message or persisting to MongoDB");
+            }
+        }
+
+        private async Task ProcessAndPersistMessageAsync(ConsumeResult<string, string> consumeResult)
+        {
+            DecodedPacketDocument document = BuildDecodedPacketDocument(consumeResult.Topic, consumeResult.Message.Value);
+            await _repository.InsertDecodedPacketAsync(document);
+            _logger.LogInformation("Stored packet in Mongo. Key: {Key}", consumeResult.Message.Key);
+        }
+
+        private DecodedPacketDocument BuildDecodedPacketDocument(string topic, string jsonPayload)
+        {
+            Dictionary<string, object> parameters = ParseParametersFromJson(jsonPayload);
+            string icdType = ExtractIcdTypeFromTopic(topic);
+
+            return new DecodedPacketDocument
+            {
+                IcdType = icdType,
+                DecodedAt = DateTime.UtcNow,
+                Parameters = parameters
+            };
+        }
+
+        private Dictionary<string, object> ParseParametersFromJson(string jsonPayload)
+        {
+            BsonDocument rawBsonDoc = BsonSerializer.Deserialize<BsonDocument>(jsonPayload);
+            return rawBsonDoc.ToDictionary();
+        }
+
+        private string ExtractIcdTypeFromTopic(string topic)
+        {
+            if (topic.StartsWith("telemetry-"))
+            {
+                return topic.Substring("telemetry-".Length);
+            }
+
+            return string.Empty;
         }
 
         private IConsumer<string, string> BuildConsumer()
