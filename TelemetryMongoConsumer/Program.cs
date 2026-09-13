@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using TelemetryMongoConsumer.Configuration;
 using TelemetryMongoConsumer.Interfaces;
@@ -21,11 +22,8 @@ builder.Services.Configure<MongoSettings>(
 
 builder.Services.AddSingleton<IMongoClient>(sp =>
 {
-    MongoSettings? mongoSettings = builder.Configuration
-        .GetSection(nameof(MongoSettings))
-        .Get<MongoSettings>();
-
-    return new MongoClient(mongoSettings?.ConnectionString);
+    IOptions<MongoSettings> mongoOptions = sp.GetRequiredService<IOptions<MongoSettings>>();
+    return new MongoClient(mongoOptions.Value.ConnectionString);
 });
 
 builder.Services.AddSingleton<ITelemetryMongoRepository, TelemetryMongoRepository>();
