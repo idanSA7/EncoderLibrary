@@ -2,9 +2,9 @@
 {
     public class KafkaSettings
     {
-        public string BootstrapServers { get; set; } = string.Empty;
-        public string Topic { get; set; } = string.Empty;
-        public int FlushTimeoutSeconds { get; set; } = 10;
-        public string GroupId { get; set; } = "telemetry-mongo-consumer-group";
+        public string BootstrapServers { get; set; } = null!;
+        public string GroupId { get; set; } = null!;
+        public string Topic { get; set; } = null!;
+        public int StopTimeoutSeconds { get; set; } = 5; 
     }
 }

@@ -51,7 +51,8 @@ namespace TelemetryMongoConsumer.Services
             _cts.Cancel();
             try
             {
-                _executingTask?.Wait(TimeSpan.FromSeconds(5));
+                int timeoutSec = _kafkaSettings.StopTimeoutSeconds > 0 ? _kafkaSettings.StopTimeoutSeconds : 5;
+                _executingTask?.Wait(TimeSpan.FromSeconds(timeoutSec));
             }
             catch (AggregateException ex) when (ex.InnerException is OperationCanceledException) { }
 
