@@ -30,7 +30,7 @@ namespace TelemetryDeviceAPI.Services
             Dictionary<IcdType, IcdModel> icdModels = LoadIcdDefinitions(icdOptions.Value.IcdDefinition);
 
             _bufferBlock = new RawPacketBuffer();
-            _frameBuilderBlock = new FrameBuilderBlock(icdModels, loggerFactory.CreateLogger<FrameBuilderBlock>());
+            _frameBuilderBlock = new FrameBuilderBlock(loggerFactory.CreateLogger<FrameBuilderBlock>());
             _decodeBlock = new PacketDecoderBlock(decoderFlow, icdModels, loggerFactory.CreateLogger<PacketDecoderBlock>());
             _kafkaBlock = new KafkaProducerBlock(kafkaProducer, loggerFactory.CreateLogger<KafkaProducerBlock>());
 
