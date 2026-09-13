@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -84,11 +85,30 @@ namespace TelemetryMongoConsumer.Services
                         ConsumeResult<string, string> consumeResult = consumer.Consume(stoppingToken);
                         if (consumeResult?.Message?.Value != null)
                         {
-                            DecodedPacketDocument? document = JsonSerializer.Deserialize<DecodedPacketDocument>(
+                            Dictionary<string, JsonElement>? parsedJson = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
                                 consumeResult.Message.Value, _jsonOptions);
 
-                            if (document != null)
+                            if (parsedJson != null)
                             {
+                                Dictionary<string, object> parameters = new Dictionary<string, object>();
+                                foreach (KeyValuePair<string, JsonElement> item in parsedJson)
+                                {
+                                    parameters[item.Key] = ExtractPrimitiveValue(item.Value);
+                                }
+
+                                string icdType = string.Empty;
+                                if (consumeResult.Topic.StartsWith("telemetry-"))
+                                {
+                                    icdType = consumeResult.Topic.Substring("telemetry-".Length);
+                                }
+
+                                DecodedPacketDocument document = new DecodedPacketDocument
+                                {
+                                    IcdType = icdType,
+                                    DecodedAt = DateTime.UtcNow,
+                                    Parameters = parameters
+                                };
+
                                 await _repository.InsertDecodedPacketAsync(document);
                                 _logger.LogInformation("Stored packet in Mongo. Key: {Key}", consumeResult.Message.Key);
                             }
@@ -110,6 +130,29 @@ namespace TelemetryMongoConsumer.Services
             {
                 consumer.Close();
                 _logger.LogInformation("Kafka Consumer closed gracefully.");
+            }
+        }
+
+        private object ExtractPrimitiveValue(JsonElement element)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.String:
+                    return element.GetString() ?? string.Empty;
+                case JsonValueKind.Number:
+                    if (element.TryGetInt64(out long int64Val))
+                    {
+                        return int64Val;
+                    }
+                    return element.GetDouble();
+                case JsonValueKind.True:
+                    return true;
+                case JsonValueKind.False:
+                    return false;
+                case JsonValueKind.Null:
+                    return string.Empty;
+                default:
+                    return element.ToString();
             }
         }
 
