@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
-using System.Security.AccessControl;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using TelemetrySimulator.Configuration;
@@ -59,9 +59,8 @@ namespace TelemetrySimulator.Services
         {
             using UdpClient udpSocketClient = new UdpClient();
             string targetIp = _networkSettings.TargetIp;
-            int basePort = (configuration.DestinationNetworkPort.HasValue && configuration.DestinationNetworkPort.Value > 0)
-                ? configuration.DestinationNetworkPort.Value
-                : _networkSettings.BasePort;
+            int basePort = _networkSettings.BasePort;
+
             try
             {
                 Console.WriteLine($"[DEBUG] Starting UDP broadcast to IP: {targetIp}, Base Port: {basePort}");
@@ -94,17 +93,27 @@ namespace TelemetrySimulator.Services
             int basePort,
             TelemetrySimulationRequestDto configuration)
         {
-            if (configuration.IcdType.HasValue)
+            if (configuration.DestinationNetworkPort.HasValue && configuration.DestinationNetworkPort.Value > 0)
             {
-                IcdType targetType = configuration.IcdType.Value;
+                int destinationPort = configuration.DestinationNetworkPort.Value;
+                int rawTypeIndex = destinationPort - basePort;
 
-                if (_icdDefinitions.TryGetValue(targetType, out IcdModel? selectedIcd))
+                if (rawTypeIndex >= 0 && Enum.IsDefined(typeof(IcdType), rawTypeIndex))
                 {
-                    await TransmitSingleIcdAsync(udpSocketClient, targetIp, basePort, targetType, selectedIcd, configuration);
+                    IcdType targetType = (IcdType)rawTypeIndex;
+
+                    if (_icdDefinitions.TryGetValue(targetType, out IcdModel? selectedIcd))
+                    {
+                        await TransmitSingleIcdAsync(udpSocketClient, targetIp, destinationPort, targetType, selectedIcd, configuration);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[WARNING] Requested ICD definition for type '{targetType}' is not registered.");
+                    }
                 }
                 else
                 {
-                    Console.WriteLine($"[WARNING] Requested ICD type '{targetType}' is not registered in definitions.");
+                    Console.WriteLine($"[WARNING] Calculated ICD index '{rawTypeIndex}' from port {destinationPort} (Base: {basePort}) is invalid.");
                 }
             }
             else
@@ -113,8 +122,9 @@ namespace TelemetrySimulator.Services
                 {
                     IcdType currentType = icdEntry.Key;
                     IcdModel currentIcd = icdEntry.Value;
+                    int targetPort = basePort + (int)currentType;
 
-                    await TransmitSingleIcdAsync(udpSocketClient, targetIp, basePort, currentType, currentIcd, configuration);
+                    await TransmitSingleIcdAsync(udpSocketClient, targetIp, targetPort, currentType, currentIcd, configuration);
                 }
             }
         }
@@ -122,14 +132,18 @@ namespace TelemetrySimulator.Services
         private async Task TransmitSingleIcdAsync(
             UdpClient udpSocketClient,
             string targetIp,
-            int basePort,
+            int targetPort,
             IcdType icdType,
             IcdModel icdModel,
             TelemetrySimulationRequestDto configuration)
         {
-            int targetPort = basePort + (int)icdType;
-
             Dictionary<string, string> currentTelemetryInputs = _dataGenerator.PrepareTelemetryData(icdModel, configuration);
+
+            string generatedJson = JsonSerializer.Serialize(currentTelemetryInputs);
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($">>> [SIMULATOR GENERATED] ICD: {icdType} | Port: {targetPort} | Data: {generatedJson}");
+            Console.ResetColor();
+
             byte[] encodedPacketBuffer = _telemetryEncoderFlow.Encode(icdModel, currentTelemetryInputs);
 
             await SendPacketAsync(udpSocketClient, encodedPacketBuffer, targetIp, targetPort);

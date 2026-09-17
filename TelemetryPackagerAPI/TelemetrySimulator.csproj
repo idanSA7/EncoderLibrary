@@ -27,4 +27,10 @@
     <ProjectReference Include="..\IcdModelsLibrary\IcdModelsLibrary.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="IcdDefinitions\FlightBoxUpIcd.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
