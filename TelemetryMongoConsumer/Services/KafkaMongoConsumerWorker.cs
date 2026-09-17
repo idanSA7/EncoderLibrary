@@ -67,9 +67,15 @@ namespace TelemetryMongoConsumer.Services
         {
             try
             {
+                if (_kafkaSettings.Topics == null || _kafkaSettings.Topics.Count == 0)
+                {
+                    _logger.LogError("No Kafka topics found in configuration. Subscription aborted.");
+                    return;
+                }
+
                 using IConsumer<Null, string> consumer = BuildConsumer();
-                consumer.Subscribe(_kafkaSettings.Topic);
-                _logger.LogInformation("Subscribed to topic: {Topic}", _kafkaSettings.Topic);
+                consumer.Subscribe(_kafkaSettings.Topics);
+                _logger.LogInformation("Subscribed to topics: {Topics}", string.Join(", ", _kafkaSettings.Topics));
 
                 while (!stoppingToken.IsCancellationRequested)
                 {
@@ -134,12 +140,12 @@ namespace TelemetryMongoConsumer.Services
 
         private string ExtractIcdTypeFromTopic(string topic)
         {
-            if (topic.StartsWith("telemetry-"))
+            if (topic.StartsWith("telemetry-", StringComparison.OrdinalIgnoreCase))
             {
                 return topic.Substring("telemetry-".Length);
             }
 
-            return string.Empty;
+            return topic;
         }
 
         private IConsumer<Null, string> BuildConsumer()
