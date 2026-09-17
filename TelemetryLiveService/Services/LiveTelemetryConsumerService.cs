@@ -1,6 +1,12 @@
-﻿using System.Text.Json.Nodes;
+﻿using System;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Threading;
+using System.Threading.Tasks;
 using Confluent.Kafka;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TelemetryLiveService.Configuration;
 using TelemetryLiveService.Hubs;
@@ -11,10 +17,10 @@ public class LiveTelemetryConsumerService
 {
     private readonly ILogger<LiveTelemetryConsumerService> _logger;
     private readonly KafkaSettings _kafkaSettings;
-    private readonly TelemetryFilterSettings _filterSettings;
     private readonly IHubContext<TelemetryHub> _hubContext;
+    private readonly ITelemetryMetricsCalculator _metricsCalculator;
 
-    private CancellationTokenSource? _LiveTelemtryCancellationToken;
+    private CancellationTokenSource? _liveTelemetryCancellationToken;
     private Task? _consumingTask;
 
     public bool IsRunning => _consumingTask != null && !_consumingTask.IsCompleted;
@@ -22,13 +28,13 @@ public class LiveTelemetryConsumerService
     public LiveTelemetryConsumerService(
         ILogger<LiveTelemetryConsumerService> logger,
         IOptions<KafkaSettings> kafkaOptions,
-        IOptions<TelemetryFilterSettings> filterOptions,
-        IHubContext<TelemetryHub> hubContext)
+        IHubContext<TelemetryHub> hubContext,
+        ITelemetryMetricsCalculator metricsCalculator)
     {
         _logger = logger;
         _kafkaSettings = kafkaOptions.Value;
-        _filterSettings = filterOptions.Value;
         _hubContext = hubContext;
+        _metricsCalculator = metricsCalculator;
     }
 
     public void StartConsuming()
@@ -39,8 +45,8 @@ public class LiveTelemetryConsumerService
             return;
         }
 
-        _LiveTelemtryCancellationToken = new CancellationTokenSource();
-        _consumingTask = Task.Run(async () => await ConsumeLoopAsync(_LiveTelemtryCancellationToken.Token));
+        _liveTelemetryCancellationToken = new CancellationTokenSource();
+        _consumingTask = Task.Run(() => ConsumeLoopAsync(_liveTelemetryCancellationToken.Token));
         _logger.LogInformation("Live Telemetry Consumer started.");
     }
 
@@ -52,56 +58,33 @@ public class LiveTelemetryConsumerService
             return;
         }
 
-        _LiveTelemtryCancellationToken?.Cancel();
-        _consumingTask?.Wait();
-        _LiveTelemtryCancellationToken?.Dispose();
-        _LiveTelemtryCancellationToken = null;
+        _liveTelemetryCancellationToken?.Cancel();
+
+        try
+        {
+            _consumingTask?.Wait(TimeSpan.FromSeconds(5));
+        }
+        catch (AggregateException ex) when (ex.InnerException is OperationCanceledException) { }
+
+        _liveTelemetryCancellationToken?.Dispose();
+        _liveTelemetryCancellationToken = null;
         _consumingTask = null;
+
+        _metricsCalculator.Reset();
         _logger.LogInformation("Live Telemetry Consumer stopped.");
     }
 
     private async Task ConsumeLoopAsync(CancellationToken cancellationToken)
     {
-        ConsumerConfig config = new ConsumerConfig
-        {
-            BootstrapServers = _kafkaSettings.BootstrapServers,
-            GroupId = _kafkaSettings.GroupId,
-            AutoOffsetReset = AutoOffsetReset.Latest,
-            EnableAutoCommit = true
-        };
-
-        using IConsumer<Ignore, string> consumer = new ConsumerBuilder<Ignore, string>(config).Build();
+        using IConsumer<Null, string> consumer = CreateConsumer();
         consumer.Subscribe(_kafkaSettings.Topic);
-
         _logger.LogInformation("Live Telemetry Consumer subscribed to topic: {Topic}", _kafkaSettings.Topic);
 
         try
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                try
-                {
-                    ConsumeResult<Ignore, string>? consumeResult = consumer.Consume(cancellationToken);
-                    if (consumeResult?.Message?.Value == null)
-                    {
-                        continue;
-                    }
-
-                    string rawMessage = consumeResult.Message.Value;
-                    _logger.LogInformation("Received raw message from Kafka: {Raw}", rawMessage);
-
-                    string? filteredJson = FilterPayload(rawMessage);
-
-                    if (filteredJson != null)
-                    {
-                        _logger.LogInformation("Broadcasting filtered data to SignalR: {Filtered}", filteredJson);
-                        await _hubContext.Clients.All.SendAsync("ReceiveTelemetry", filteredJson, cancellationToken);
-                    }
-                }
-                catch (ConsumeException ex)
-                {
-                    _logger.LogError(ex, "Kafka consume error occurred.");
-                }
+                await ProcessSingleMessageAsync(consumer, cancellationToken);
             }
         }
         catch (OperationCanceledException)
@@ -114,37 +97,52 @@ public class LiveTelemetryConsumerService
         }
     }
 
-    private string? FilterPayload(string rawJson)
+    private async Task ProcessSingleMessageAsync(IConsumer<Null, string> consumer, CancellationToken cancellationToken)
     {
         try
         {
-            JsonNode? jsonNode = JsonNode.Parse(rawJson);
+            ConsumeResult<Null, string>? consumeResult = consumer.Consume(cancellationToken);
+            if (string.IsNullOrWhiteSpace(consumeResult?.Message?.Value))
+            {
+                return;
+            }
+
+            JsonNode? jsonNode = JsonNode.Parse(consumeResult.Message.Value);
             if (jsonNode is not JsonObject jsonObject)
             {
-                return rawJson;
+                return;
             }
 
-            if (_filterSettings.IncludedFields == null || !_filterSettings.IncludedFields.Any())
+            Dictionary<string, object> averages = _metricsCalculator.CalculateMetrics(jsonObject);
+
+            if (averages.Count > 0)
             {
-                return rawJson;
+                string payload = JsonSerializer.Serialize(averages);
+                await BroadcastTelemetryAsync(payload, cancellationToken);
             }
-
-            JsonObject filteredObject = new JsonObject();
-
-            foreach (string field in _filterSettings.IncludedFields)
-            {
-                if (jsonObject.TryGetPropertyValue(field, out JsonNode? value))
-                {
-                    filteredObject[field] = value?.DeepClone();
-                }
-            }
-
-            return filteredObject.ToJsonString();
         }
-        catch (Exception ex)
+        catch (ConsumeException ex)
         {
-            _logger.LogWarning(ex, "Failed to parse or filter JSON payload");
-            return null;
+            _logger.LogError(ex, "Kafka consume error occurred.");
         }
+    }
+
+    private async Task BroadcastTelemetryAsync(string payload, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Broadcasting calculated averages to SignalR: {Payload}", payload);
+        await _hubContext.Clients.All.SendAsync("ReceiveTelemetry", payload, cancellationToken);
+    }
+
+    private IConsumer<Null, string> CreateConsumer()
+    {
+        ConsumerConfig config = new ConsumerConfig
+        {
+            BootstrapServers = _kafkaSettings.BootstrapServers,
+            GroupId = _kafkaSettings.GroupId,
+            AutoOffsetReset = AutoOffsetReset.Latest,
+            EnableAutoCommit = true
+        };
+
+        return new ConsumerBuilder<Null, string>(config).Build();
     }
 }
