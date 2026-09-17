@@ -1,85 +1,84 @@
-﻿using Confluent.Kafka;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Confluent.Kafka;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TelemetryMongoConsumer.Configuration;
 using TelemetryMongoConsumer.Interfaces;
-using TelemetryMongoConsumer.Models;
 
 namespace TelemetryMongoConsumer.Services
 {
     public class KafkaMongoConsumerWorker : IKafkaConsumerManager, IDisposable
     {
         private readonly ILogger<KafkaMongoConsumerWorker> _logger;
-        private readonly ITelemetryMongoRepository _repository;
         private readonly KafkaSettings _kafkaSettings;
+        private readonly ITelemetryPacketProcessor _packetProcessor;
 
-        private CancellationTokenSource? _cts;
+        private CancellationTokenSource? _cancellationTokenSource;
         private Task? _executingTask;
-
-        public bool IsRunning => _executingTask != null && !_executingTask.IsCompleted;
 
         public KafkaMongoConsumerWorker(
             ILogger<KafkaMongoConsumerWorker> logger,
-            ITelemetryMongoRepository repository,
-            IOptions<KafkaSettings> kafkaOptions)
+            IOptions<KafkaSettings> kafkaOptions,
+            ITelemetryPacketProcessor packetProcessor)
         {
             _logger = logger;
-            _repository = repository;
             _kafkaSettings = kafkaOptions.Value;
+            _packetProcessor = packetProcessor;
         }
 
         public bool Start()
         {
-            if (IsRunning) return false;
+            if (_executingTask != null && !_executingTask.IsCompleted)
+            {
+                _logger.LogWarning("Kafka Consumer is already running.");
+                return false;
+            }
 
-            _cts = new CancellationTokenSource();
-            _executingTask = Task.Run(() => RunConsumerLoopAsync(_cts.Token));
-            _logger.LogInformation("Kafka Mongo Consumer started manually.");
+            _cancellationTokenSource = new CancellationTokenSource();
+            _executingTask = Task.Run(() => StartConsumerLoopAsync(_cancellationTokenSource.Token));
+            _logger.LogInformation("Kafka Consumer started successfully.");
             return true;
         }
 
         public bool Stop()
         {
-            if (!IsRunning || _cts == null) return false;
+            if (_executingTask == null || _executingTask.IsCompleted)
+            {
+                _logger.LogWarning("Kafka Consumer is not running.");
+                return false;
+            }
 
-            _cts.Cancel();
+            _cancellationTokenSource?.Cancel();
+
             try
             {
-                int timeoutSec = _kafkaSettings.StopTimeoutSeconds > 0 ? _kafkaSettings.StopTimeoutSeconds : 5;
-                _executingTask?.Wait(TimeSpan.FromSeconds(timeoutSec));
+                _executingTask.Wait(TimeSpan.FromSeconds(5));
             }
-            catch (AggregateException ex) when (ex.InnerException is OperationCanceledException) { }
+            catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
+            {
+            }
 
-            _cts.Dispose();
-            _cts = null;
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = null;
             _executingTask = null;
-            _logger.LogInformation("Kafka Mongo Consumer stopped manually.");
+
+            _logger.LogInformation("Kafka Consumer stopped successfully.");
             return true;
         }
 
-        private async Task RunConsumerLoopAsync(CancellationToken stoppingToken)
+        private async Task StartConsumerLoopAsync(CancellationToken stoppingToken)
         {
+            using IConsumer<Null, string> consumer = BuildConsumer();
+            consumer.Subscribe(_kafkaSettings.Topic);
+            _logger.LogInformation("Kafka Consumer subscribed to topic: {Topic}", _kafkaSettings.Topic);
+
             try
             {
-                if (_kafkaSettings.Topics == null || _kafkaSettings.Topics.Count == 0)
-                {
-                    _logger.LogError("No Kafka topics found in configuration. Subscription aborted.");
-                    return;
-                }
-
-                using IConsumer<Null, string> consumer = BuildConsumer();
-                consumer.Subscribe(_kafkaSettings.Topics);
-                _logger.LogInformation("Subscribed to topics: {Topics}", string.Join(", ", _kafkaSettings.Topics));
-
                 while (!stoppingToken.IsCancellationRequested)
                 {
-                    await ConsumeAndProcessSingleMessageAsync(consumer, stoppingToken);
+                    await ConsumeSingleMessageAsync(consumer, stoppingToken);
                 }
 
                 consumer.Close();
@@ -91,7 +90,7 @@ namespace TelemetryMongoConsumer.Services
             }
         }
 
-        private async Task ConsumeAndProcessSingleMessageAsync(IConsumer<Null, string> consumer, CancellationToken stoppingToken)
+        private async Task ConsumeSingleMessageAsync(IConsumer<Null, string> consumer, CancellationToken stoppingToken)
         {
             try
             {
@@ -101,7 +100,7 @@ namespace TelemetryMongoConsumer.Services
                     return;
                 }
 
-                await ProcessAndPersistMessageAsync(consumeResult);
+                await _packetProcessor.ProcessAndSaveAsync(consumeResult);
                 consumer.Commit(consumeResult);
             }
             catch (OperationCanceledException)
@@ -111,41 +110,6 @@ namespace TelemetryMongoConsumer.Services
             {
                 _logger.LogError(ex, "Error processing Kafka message or persisting to MongoDB");
             }
-        }
-
-        private async Task ProcessAndPersistMessageAsync(ConsumeResult<Null, string> consumeResult)
-        {
-            DecodedPacketDocument document = BuildDecodedPacketDocument(consumeResult.Topic, consumeResult.Message.Value);
-            await _repository.InsertDecodedPacketAsync(document);
-        }
-
-        private DecodedPacketDocument BuildDecodedPacketDocument(string topic, string jsonPayload)
-        {
-            Dictionary<string, object> parameters = ParseParametersFromJson(jsonPayload);
-            string icdType = ExtractIcdTypeFromTopic(topic);
-
-            return new DecodedPacketDocument
-            {
-                IcdType = icdType,
-                DecodedAt = DateTime.UtcNow,
-                Parameters = parameters
-            };
-        }
-
-        private Dictionary<string, object> ParseParametersFromJson(string jsonPayload)
-        {
-            BsonDocument rawBsonDoc = BsonSerializer.Deserialize<BsonDocument>(jsonPayload);
-            return rawBsonDoc.ToDictionary();
-        }
-
-        private string ExtractIcdTypeFromTopic(string topic)
-        {
-            if (topic.StartsWith("telemetry-", StringComparison.OrdinalIgnoreCase))
-            {
-                return topic.Substring("telemetry-".Length);
-            }
-
-            return topic;
         }
 
         private IConsumer<Null, string> BuildConsumer()

@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using TelemetryMongoConsumer.Configuration;
 using TelemetryMongoConsumer.Interfaces;
@@ -14,20 +13,19 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+MongoSettings mongoSettings = builder.Configuration
+    .GetSection(nameof(MongoSettings))
+    .Get<MongoSettings>() ?? new MongoSettings();
+
+builder.Services.AddSingleton(mongoSettings);
+
 builder.Services.Configure<KafkaSettings>(
     builder.Configuration.GetSection(nameof(KafkaSettings)));
 
-builder.Services.Configure<MongoSettings>(
-    builder.Configuration.GetSection(nameof(MongoSettings)));
+builder.Services.AddSingleton<IMongoClient>(new MongoClient(mongoSettings.ConnectionString));
 
-builder.Services.AddSingleton<IMongoClient>(sp =>
-{
-    IOptions<MongoSettings> mongoOptions = sp.GetRequiredService<IOptions<MongoSettings>>();
-    return new MongoClient(mongoOptions.Value.ConnectionString);
-});
-
+builder.Services.AddSingleton<ITelemetryPacketProcessor, TelemetryPacketProcessor>();
 builder.Services.AddSingleton<ITelemetryMongoRepository, TelemetryMongoRepository>();
-
 builder.Services.AddSingleton<IKafkaConsumerManager, KafkaMongoConsumerWorker>();
 
 WebApplication app = builder.Build();
