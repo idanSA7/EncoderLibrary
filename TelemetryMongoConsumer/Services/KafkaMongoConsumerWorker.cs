@@ -65,29 +65,31 @@ namespace TelemetryMongoConsumer.Services
 
         private async Task RunConsumerLoopAsync(CancellationToken stoppingToken)
         {
-            using IConsumer<string, string> consumer = BuildConsumer();
-            consumer.Subscribe(_kafkaSettings.Topic);
-            _logger.LogInformation("Subscribed to topic: {Topic}", _kafkaSettings.Topic);
-
             try
             {
+                using IConsumer<Null, string> consumer = BuildConsumer();
+                consumer.Subscribe(_kafkaSettings.Topic);
+                _logger.LogInformation("Subscribed to topic: {Topic}", _kafkaSettings.Topic);
+
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     await ConsumeAndProcessSingleMessageAsync(consumer, stoppingToken);
                 }
-            }
-            finally
-            {
+
                 consumer.Close();
                 _logger.LogInformation("Kafka Consumer closed gracefully.");
             }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "FATAL: Kafka Consumer loop crashed unexpectedly!");
+            }
         }
 
-        private async Task ConsumeAndProcessSingleMessageAsync(IConsumer<string, string> consumer, CancellationToken stoppingToken)
+        private async Task ConsumeAndProcessSingleMessageAsync(IConsumer<Null, string> consumer, CancellationToken stoppingToken)
         {
             try
             {
-                ConsumeResult<string, string> consumeResult = consumer.Consume(stoppingToken);
+                ConsumeResult<Null, string> consumeResult = consumer.Consume(stoppingToken);
                 if (consumeResult?.Message?.Value == null)
                 {
                     return;
@@ -105,11 +107,10 @@ namespace TelemetryMongoConsumer.Services
             }
         }
 
-        private async Task ProcessAndPersistMessageAsync(ConsumeResult<string, string> consumeResult)
+        private async Task ProcessAndPersistMessageAsync(ConsumeResult<Null, string> consumeResult)
         {
             DecodedPacketDocument document = BuildDecodedPacketDocument(consumeResult.Topic, consumeResult.Message.Value);
             await _repository.InsertDecodedPacketAsync(document);
-            _logger.LogInformation("Stored packet in Mongo. Key: {Key}", consumeResult.Message.Key);
         }
 
         private DecodedPacketDocument BuildDecodedPacketDocument(string topic, string jsonPayload)
@@ -141,7 +142,7 @@ namespace TelemetryMongoConsumer.Services
             return string.Empty;
         }
 
-        private IConsumer<string, string> BuildConsumer()
+        private IConsumer<Null, string> BuildConsumer()
         {
             ConsumerConfig config = new ConsumerConfig
             {
@@ -151,7 +152,7 @@ namespace TelemetryMongoConsumer.Services
                 EnableAutoCommit = false
             };
 
-            return new ConsumerBuilder<string, string>(config).Build();
+            return new ConsumerBuilder<Null, string>(config).Build();
         }
 
         public void Dispose()
