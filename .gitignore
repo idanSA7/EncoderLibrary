@@ -1,7 +1,32 @@
+# ==========================================
+# .NET / Visual Studio
+# ==========================================
 .vs/
 bin/
 obj/
 *.csproj.user
 EncoderTests/
-*.csproj.user
 *.user
+
+# ==========================================
+# Python Environments & Cache
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+
+venv/
+.venv/
+env/
+ENV/
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ==========================================
+# PyCharm
+# ==========================================
+.idea/
+*.iws
+out/
