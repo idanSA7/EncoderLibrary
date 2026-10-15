@@ -37,9 +37,11 @@ def calculate_sill(known_deltas: np.ndarray, default_sill: float = DEFAULT_KRIGI
     return max(sample_variance, DEFAULT_KRIGING_CONFIG.min_variance_floor)
 
 
-def build_kriging_matrix(known_coords: np.ndarray, a: float = DEFAULT_KRIGING_CONFIG.default_range_a, c: float = DEFAULT_KRIGING_CONFIG.default_sill_c) -> np.ndarray:
-    n_samples = len(known_coords)
+def build_kriging_matrix(known_coords: np.ndarray,
+    a: float = DEFAULT_KRIGING_CONFIG.default_range_a,
+    c: float = DEFAULT_KRIGING_CONFIG.default_sill_c) -> np.ndarray:
 
+    n_samples = len(known_coords)
     kriging_matrix = np.zeros((n_samples + 1, n_samples + 1), dtype=float)
 
     for row_idx in range(n_samples):
@@ -55,3 +57,47 @@ def build_kriging_matrix(known_coords: np.ndarray, a: float = DEFAULT_KRIGING_CO
         kriging_matrix[idx, n_samples] = LAGRANGE_WEIGHT_CONSTRAINT
 
     return kriging_matrix
+
+def build_kriging_vector(
+    known_coords: np.ndarray,
+    target_coord: np.ndarray,
+    a: float = DEFAULT_KRIGING_CONFIG.default_range_a,
+    c: float = DEFAULT_KRIGING_CONFIG.default_sill_c,
+) -> np.ndarray:
+    n_samples = len(known_coords)
+    kriging_vector = np.zeros(n_samples + 1, dtype=float)
+    for row_idx in range(n_samples):
+        euclidean_distance = float(
+            np.linalg.norm(
+                known_coords[row_idx] - target_coord ))
+
+        kriging_vector[row_idx] = spherical_variogram(euclidean_distance, a, c)
+
+    kriging_vector[n_samples] = LAGRANGE_WEIGHT_CONSTRAINT
+    return kriging_vector
+
+def solve_kriging(known_coords: np.ndarray,
+    known_deltas: np.ndarray,
+    target_coord: np.ndarray,
+    a: float = DEFAULT_KRIGING_CONFIG.default_range_a,
+    c: float | None = None,
+) -> tuple[float, float]:
+    if c is None:
+        c = calculate_sill(known_deltas, DEFAULT_KRIGING_CONFIG.default_sill_c)
+    kriging_matrix=build_kriging_matrix(known_coords,)
+    kriging_vector=build_kriging_vector(known_coords,target_coord,)
+    weights = np.linalg.solve(kriging_matrix, kriging_vector)
+
+    n_samples = len(known_deltas)
+    sample_weights = weights[:n_samples]
+
+    predicted_delta = float(np.sum(sample_weights * known_deltas))
+    kriging_variance = float(np.sum(weights * kriging_vector))
+
+    return predicted_delta, max(kriging_variance, 0.0)
+
+
+
+
+
+
