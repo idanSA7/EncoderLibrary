@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-
 @dataclass(frozen=True)
 class KrigingConfig:
     default_range_a: float = 40.0
