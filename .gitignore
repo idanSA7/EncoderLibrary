@@ -5,3 +5,7 @@ obj/
 EncoderTests/
 *.csproj.user
 *.user
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
