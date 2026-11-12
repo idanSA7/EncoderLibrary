@@ -8,3 +8,6 @@ EncoderTests/
 # PyCharm settings
 .idea/
 *.iml
+# Python cache
+__pycache__/
+*.pyc
