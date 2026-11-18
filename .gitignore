@@ -5,3 +5,6 @@ obj/
 EncoderTests/
 *.csproj.user
 *.user
+# PyCharm settings
+.idea/
+*.iml
