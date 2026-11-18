@@ -8,3 +8,13 @@ EncoderTests/
 # PyCharm settings
 .idea/
 *.iml
+# Python & virtual environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Raw datasets & large binary outputs
+algorithms/data/raw/
+*.zip
+*.parquet
