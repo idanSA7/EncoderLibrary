@@ -8,3 +8,12 @@ EncoderTests/
 # PyCharm settings
 .idea/
 *.iml
+# Python cache
+__pycache__/
+*.pyc
+
+algorithms/data/raw/
+algorithms/data/processed/
+catboost_info/
+*.zip
+*.parquet
