@@ -11,3 +11,9 @@ EncoderTests/
 # Python cache
 __pycache__/
 *.pyc
+
+algorithms/data/raw/
+algorithms/data/processed/
+catboost_info/
+*.zip
+*.parquet
